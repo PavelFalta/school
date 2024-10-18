@@ -36,7 +36,6 @@ def zasli_recept():
     if request.method == "GET":
         return render_template("formular.html")
     else:
-        print(request.form)
         jmeno = request.form.get("jmeno")
         ingredience = request.form.get("ingredience").split("\n")
         postup = request.form.get("postup")
