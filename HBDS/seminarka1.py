@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import StandardScaler, LabelEncoder, PolynomialFeatures
-from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_auc_score, r2_score, mean_squared_error
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_auc_score, r2_score, mean_squared_error, roc_curve
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -136,7 +136,7 @@ def glass_pipeline(file_path, VERBOSE, target_column):
     evaluate_model(mv_clf, X_train, y_train, 'Majority Voting')
     print(sep="\n\n")
 
-    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.1, 0.2, 0.3, 0.4])
+    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.1, 0.2, 0.3, 0.4]) # Since the Random Forest model is performing well, we give it most weight
     if VERBOSE:
         print("Evaluating Weighted Majority Voting Classifier...")
     evaluate_model(mv_clf_weighted, X_train, y_train, 'Majority Voting (Weighted)')
@@ -214,7 +214,7 @@ def breasts_pipeline(file_path, VERBOSE, target_column):
     evaluate_model(mv_clf, X_train, y_train, 'Majority Voting', True)
     print(sep="\n\n")
 
-    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.4, 0.1, 0.2, 0.2])
+    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.4, 0.1, 0.2, 0.2]) # Since the Linear Regression model is performing well, we give it most weight
     if VERBOSE:
         print("Evaluating Weighted Majority Voting Classifier...")
     evaluate_model(mv_clf_weighted, X_train, y_train, 'Majority Voting (Weighted)', True)
@@ -245,6 +245,8 @@ def breasts_pipeline(file_path, VERBOSE, target_column):
         print("Visualizing results...")
     visualize_results(pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)], X_test, y_test, le)
 
+    plot_roc_curve(pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)], X_test, y_test, le)
+
 
 def evaluate_model(model, X_train, y_train, label, binary=False):
     scores_acc = cross_val_score(estimator=model, X=X_train, y=y_train, cv=6, scoring='accuracy')
@@ -257,7 +259,24 @@ def evaluate_model(model, X_train, y_train, label, binary=False):
         scores_roc_auc = cross_val_score(estimator=model, X=X_train, y=y_train, cv=6, scoring='roc_auc')
         print("ROC AUC: %0.3f (+/- %0.3f) [%s]" % (scores_roc_auc.mean(), scores_roc_auc.std(), label))
 
+def plot_roc_curve(models, X_test, y_test, label_encoder):
+    plt.figure(figsize=(10, 8))
+    for name, model in models:
+        y_proba = model.predict_proba(X_test)[:, 1]
 
+        fpr, tpr, _ = roc_curve(y_test, y_proba)
+        plt.plot(fpr, tpr, label=f'{name} (AUC = {roc_auc_score(y_test, y_proba):.2f})')
+
+    plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc='lower right')
+    plt.grid(alpha=0.3)
+    plt.show()
+    
 def visualize_results(models, X_test, y_test, label_encoder):
     results = []
     for name, model in models:
