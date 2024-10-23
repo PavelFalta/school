@@ -1,18 +1,14 @@
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.preprocessing import StandardScaler, LabelEncoder, PolynomialFeatures
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_auc_score, r2_score, mean_squared_error, roc_curve
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer, KNNImputer
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
@@ -89,31 +85,38 @@ class MajorityVoteClassifier(BaseEstimator, ClassifierMixin):
         return self
 
 
-def glass_pipeline(file_path, VERBOSE, target_column):
+def glass_pipeline(file_path, target_column):
+    #load the dataset
     data = pd.read_csv(file_path)
     
-    # Task 1: Data Preprocessing
+    #task 1: data preprocessing
     if VERBOSE:
+        #print initial data
         print("Initial Data:")
         print(data.head(), end='\n\n')
 
+    #summarize missing values
     missing_summary = data.isnull().sum()
     if VERBOSE:
+        #print missing values summary
         print("Missing Values Summary:")
         print(missing_summary, end='\n\n')
 
+    #separate features and target variable
     X = data.drop(columns=target_column)
     y = data[target_column]
     le = LabelEncoder()
     y = le.fit_transform(y)
 
     if VERBOSE:
+        #print encoded target variable
         print("Encoded Target Variable:")
         print(y, end='\n\n')
 
+    #split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-    # Task 2: Select the base models
+    #task 2: select the base models
     classifiers = [
         ('Logistic Regression', LogisticRegression(penalty='l2', C=1.0, solver='liblinear', random_state=42)),
         ('Decision Tree', DecisionTreeClassifier(max_depth=10, criterion='entropy', random_state=42)),
@@ -121,77 +124,91 @@ def glass_pipeline(file_path, VERBOSE, target_column):
         ('Random Forest', RandomForestClassifier(n_estimators=200, criterion='entropy', random_state=42))
     ]
 
+    #create pipelines for each classifier
     pipelines = [(name, Pipeline([('sc', StandardScaler()), ('clf', clf)])) for name, clf in classifiers]
 
-    # Evaluate the models
+    #evaluate the models
     for name, pipeline in pipelines:
         if VERBOSE:
+            #print evaluation message
             print(f"Evaluating {name}...")
         evaluate_model(pipeline, X_train, y_train, name)
 
-    # Task 3: Combine the models using Ensemble Technique
+    #task 3: combine the models using ensemble technique
     mv_clf = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines])
     if VERBOSE:
+        #print evaluation message for majority voting classifier
         print("Evaluating Majority Voting Classifier...")
     evaluate_model(mv_clf, X_train, y_train, 'Majority Voting')
-    print(sep="\n\n")
+    print(end="\n\n")
 
-    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.1, 0.2, 0.3, 0.4]) # Since the Random Forest model is performing well, we give it most weight
+    #weighted majority voting classifier
+    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.1, 0.2, 0.3, 0.4]) #since the random forest model is performing well, we give it most weight
     if VERBOSE:
+        #print evaluation message for weighted majority voting classifier
         print("Evaluating Weighted Majority Voting Classifier...")
     evaluate_model(mv_clf_weighted, X_train, y_train, 'Majority Voting (Weighted)')
-    print(sep="\n\n")
+    print(end="\n\n")
 
-    # Task 4: Compare the performance of your hybrid model with individual base models
+    #task 4: compare the performance of your hybrid model with individual base models
     trained_clfs = []
     for name, pipeline in pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)]:
         if VERBOSE:
+            #print training and saving message
             print(f"Training and saving {name}...")
         pipeline.fit(X_train, y_train)
         joblib.dump(pipeline, f'{name}_model.pkl')
         trained_clfs.append(pipeline)
         evaluate_model(pipeline, X_train, y_train, name)
 
-    # Task 5: Evaluate your model on test data
+    #task 5: evaluate your model on test data
     for name, pipeline in pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)]:
         y_pred = pipeline.predict(X_test)
         if VERBOSE:
+            #print evaluation message for test data
             print(f"Evaluation on test data for {name}:")
-        print(f"Accuracy: {accuracy_score(y_test, y_pred):.3f}")
-        print(f"F1 Score: {f1_score(y_test, y_pred, average='macro'):.3f}")
-        print(confusion_matrix(y_test, y_pred), end='\n\n')
+            print(f"Accuracy: {accuracy_score(y_test, y_pred):.3f}")
+            print(f"F1 Score: {f1_score(y_test, y_pred, average='macro'):.3f}")
+            print(confusion_matrix(y_test, y_pred), end='\n\n')
 
-    # Task 6: Visualize the results
+    #task 6: visualize the results
     if VERBOSE:
+        #print visualizing results message
         print("Visualizing results...")
     visualize_results(pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)], X_test, y_test, le)
 
 
-def breasts_pipeline(file_path, VERBOSE, target_column):
+def breasts_pipeline(file_path, target_column):
+    #load the dataset
     data = pd.read_csv(file_path)
     
-    # Task 1: Data Preprocessing
+    #task 1: data preprocessing
     if VERBOSE:
+        #print initial data
         print("Initial Data:")
         print(data.head(), end='\n\n')
 
+    #summarize missing values
     missing_summary = data.isnull().sum()
     if VERBOSE:
-        print("Missing Values Summary:")
+        #print missing values summary
         print(missing_summary, end='\n\n')
 
+    #separate features and target variable
     X = data.drop(columns=target_column)
     y = data[target_column]
     le = LabelEncoder()
     y = le.fit_transform(y)
 
     if VERBOSE:
+        #print encoded target variable
         print("Encoded Target Variable:")
         print(y, end='\n\n')
 
+    #split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-    # Task 2: Select the base models
+    #task 2: select the base models
     classifiers = [
         ('Logistic Regression', LogisticRegression(penalty='l2', C=1.0, solver='liblinear', random_state=42)),
         ('Decision Tree', DecisionTreeClassifier(max_depth=10, criterion='entropy', random_state=42)),
@@ -199,67 +216,79 @@ def breasts_pipeline(file_path, VERBOSE, target_column):
         ('Random Forest', RandomForestClassifier(n_estimators=200, criterion='entropy', random_state=42))
     ]
 
+    #create pipelines for each classifier
     pipelines = [(name, Pipeline([('sc', StandardScaler()), ('clf', clf)])) for name, clf in classifiers]
 
-    # Evaluate the models
+    #evaluate the models
     for name, pipeline in pipelines:
         if VERBOSE:
+            #print evaluation message
             print(f"Evaluating {name}...")
         evaluate_model(pipeline, X_train, y_train, name, True)
 
-    # Task 3: Combine the models using Ensemble Technique
+    #task 3: combine the models using ensemble technique
     mv_clf = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines])
     if VERBOSE:
+        #print evaluation message for majority voting classifier
         print("Evaluating Majority Voting Classifier...")
     evaluate_model(mv_clf, X_train, y_train, 'Majority Voting', True)
-    print(sep="\n\n")
+    print(end="\n\n")
 
-    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.4, 0.1, 0.2, 0.2]) # Since the Linear Regression model is performing well, we give it most weight
+    #weighted majority voting classifier
+    mv_clf_weighted = MajorityVoteClassifier(classifiers=[pipe for _, pipe in pipelines], weights=[0.4, 0.1, 0.2, 0.2]) #since the logistic regression model is performing well, we give it most weight
     if VERBOSE:
+        #print evaluation message for weighted majority voting classifier
         print("Evaluating Weighted Majority Voting Classifier...")
     evaluate_model(mv_clf_weighted, X_train, y_train, 'Majority Voting (Weighted)', True)
-    print(sep="\n\n")
+    print(end="\n\n")
 
-    # Task 4: Compare the performance of your hybrid model with individual base models
+    #task 4: compare the performance of your hybrid model with individual base models
     trained_clfs = []
     for name, pipeline in pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)]:
         if VERBOSE:
+            #print training and saving message
             print(f"Training and saving {name}...")
         pipeline.fit(X_train, y_train)
         joblib.dump(pipeline, f'{name}_model.pkl')
         trained_clfs.append(pipeline)
         evaluate_model(pipeline, X_train, y_train, name, True)
 
-    # Task 5: Evaluate your model on test data
+    #task 5: evaluate your model on test data
     for name, pipeline in pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)]:
         y_pred = pipeline.predict(X_test)
         if VERBOSE:
+            #print evaluation message for test data
             print(f"Evaluation on test data for {name}:")
-        print(f"Accuracy: {accuracy_score(y_test, y_pred):.3f}")
-        print(f"F1 Score: {f1_score(y_test, y_pred, average='macro'):.3f}")
-        print(f"ROC AUC: {roc_auc_score(y_test, y_pred):.3f}")
-        print(confusion_matrix(y_test, y_pred), end='\n\n')
+            print(f"Accuracy: {accuracy_score(y_test, y_pred):.3f}")
+            print(f"F1 Score: {f1_score(y_test, y_pred, average='macro'):.3f}")
+            print(f"ROC AUC: {roc_auc_score(y_test, y_pred):.3f}")
+            print(confusion_matrix(y_test, y_pred), end='\n\n')
 
-    # Task 6: Visualize the results
+    #task 6: visualize the results
     if VERBOSE:
+        #print visualizing results message
         print("Visualizing results...")
     visualize_results(pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)], X_test, y_test, le)
 
+    #plot roc curve
     plot_roc_curve(pipelines + [('Majority Voting', mv_clf), ('Majority Voting (Weighted)', mv_clf_weighted)], X_test, y_test, le)
 
-
 def evaluate_model(model, X_train, y_train, label, binary=False):
+    #evaluate model accuracy
     scores_acc = cross_val_score(estimator=model, X=X_train, y=y_train, cv=6, scoring='accuracy')
     print("Accuracy: %0.3f (+/- %0.3f) [%s]" % (scores_acc.mean(), scores_acc.std(), label))
     
+    #evaluate model f1 score
     scores_f1 = cross_val_score(estimator=model, X=X_train, y=y_train, cv=6, scoring='f1_macro')
     print("F1 Score: %0.3f (+/- %0.3f) [%s]" % (scores_f1.mean(), scores_f1.std(), label))
     
     if binary:
+        #evaluate model roc auc score
         scores_roc_auc = cross_val_score(estimator=model, X=X_train, y=y_train, cv=6, scoring='roc_auc')
         print("ROC AUC: %0.3f (+/- %0.3f) [%s]" % (scores_roc_auc.mean(), scores_roc_auc.std(), label))
 
 def plot_roc_curve(models, X_test, y_test, label_encoder):
+    #plot roc curve for models
     plt.figure(figsize=(10, 8))
     for name, model in models:
         y_proba = model.predict_proba(X_test)[:, 1]
@@ -278,6 +307,7 @@ def plot_roc_curve(models, X_test, y_test, label_encoder):
     plt.show()
     
 def visualize_results(models, X_test, y_test, label_encoder):
+    #visualize model performance
     results = []
     for name, model in models:
         y_pred = model.predict(X_test)
@@ -287,7 +317,7 @@ def visualize_results(models, X_test, y_test, label_encoder):
 
     results_df = pd.DataFrame(results, columns=['Model', 'Accuracy', 'F1 Score'])
     results_df.set_index('Model', inplace=True)
-    print(results_df)
+    print(results_df, end='\n\n')
 
     results_df[['Accuracy', 'F1 Score']].plot(kind='bar', figsize=(10, 6))
     plt.title('Model Performance')
@@ -298,7 +328,7 @@ def visualize_results(models, X_test, y_test, label_encoder):
 
 if __name__ == "__main__":
 
-    VERBOSE = False #"Datasets/breast-cancer.csv", 
+    VERBOSE = False
 
-    #glass_pipeline("Datasets/glass.csv", VERBOSE, "Type")
-    breasts_pipeline("Datasets/breast-cancer.csv", VERBOSE, "diagnosis")
+    glass_pipeline("Datasets/glass.csv", "Type")
+    breasts_pipeline("Datasets/breast-cancer.csv", "diagnosis")
