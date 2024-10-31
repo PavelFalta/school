@@ -6,16 +6,17 @@ frequency = 5
 period = 1 / frequency
 amplitude = 1
 noise_amplitude = 0.5
-sampling_rate = 1000 
+sampling_rate = 1000
 duration = 200 * np.pi
 
 t = np.linspace(0, duration, int(sampling_rate * duration), endpoint=False)
 
 signal = amplitude * np.sin(2 * np.pi * frequency * t)
 
-noise = noise_amplitude * np.random.normal(size=t.shape)
+def increasing_noise(amp, t):
+    return amp * np.random.normal(size=t.shape) * (t / t.max())
 
-noisy_signal = signal + noise
+noisy_signal = signal + increasing_noise(noise_amplitude, t)
 
 plt.figure(figsize=(10, 6))
 plt.plot(t, signal, label='Periodic Signal')
