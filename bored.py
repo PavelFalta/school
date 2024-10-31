@@ -45,4 +45,6 @@ print("Sorted values:", sorted_values)
 from collections import deque
 
 s = deque()
-print(s[-1])
+# print(s[-1])
+
+print(1//2)
