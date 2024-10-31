@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 frequency = 5
 period = 1 / frequency
 amplitude = 1
-noise_amplitude = 0.5
+noise_amplitude = 15
 sampling_rate = 1000
 duration = 200 * np.pi
 
@@ -30,6 +30,8 @@ noisy_signal_matrix = noisy_signal[:num_periods * samples_per_period].reshape((n
 
 plt.plot(noisy_signal_matrix[0])
 plt.show()
+
+noisy_signal_matrix = noisy_signal_matrix * np.linspace(1, 0, num_periods).reshape(-1, 1)
 
 mean_signal = np.mean(noisy_signal_matrix, axis=0)
 
