@@ -26,7 +26,7 @@ def process_csv(input_file, output_file):
             writer.writerow(formatted_row)
 
 # Specify the input and output CSV file paths
-input_csv = 'zamestnanci.csv'  # Your input CSV file
+input_csv = 'Zamestnanci.csv'  # Your input CSV file
 output_csv = 'output.csv'  # Output CSV file with formatted dates
 
 process_csv(input_csv, output_csv)

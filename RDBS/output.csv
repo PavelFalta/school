@@ -1,0 +1,11 @@
+id_zam,jmeno,prijmeni,dat_nas,adresa,telefon,mail,dat_nar,id_poz,odmena
+1,Karel,Král,2015-01-01,"Na stráni 15, Děčín",123456789,karel.kral@seznam.cz,1995-10-12,1,15000
+2,Eva,Tichá,2015-01-15,"Spartakiádní 14, Liberec",789123456,eva.ticha@centrum.cz,1997-09-07,2,8000
+3,Jan,Novák,2015-02-01,"Krátká 8, Ústí nad Labem",456789123,jan.novak@gmail.com,1992-04-15,3,10000
+4,Marek,Plachý,2015-02-01,"Pod lesem 79, Teplice",987654321,marek.plachy@seznam.cz,1989-02-28,4,5000
+5,Jana,Krátká,2015-03-01,"V úvozu 3, Děčín",654321987,jana.kratka@centrum.cz,1991-03-21,3,8000
+6,Adam,Pyšný,2015-03-01,"U hradeb 8, Děčín",987123654,adam.pysny33@seznam.cz,1994-03-21,4,4000
+7,Anna,Nová,2015-03-12,"Na skřivánku 11/4, Ústí nad Labem",159368742,anickanova@gmail.com,1998-09-18,5,6000
+8,Klára,Suchá,2015-06-01,"Výstavní 93, Ústí nad Labem",159863742,sucha.klarka@seznam.cz,1998-12-06,6,12000
+9,Martin,Ferman,2015-06-23,"Neděliště 3, Teplice",135798642,fermartin@post.cz,1990-08-14,7,12000
+10,Emil,Konečný,2015-08-03,"Sídelní 64/3, Lovosice",246813579,konecnyemilio@gmail.com,1996-11-16,8,9000
