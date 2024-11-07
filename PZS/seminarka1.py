@@ -4,7 +4,7 @@ import scipy.signal as signal
 
 data_path = "PZS/data/100001_ECG.dat"
 hz = 1000
-seconds = 20000
+seconds = 10000
 
 def load_data(data_path):
     data = np.fromfile(data_path, dtype=np.int16)
