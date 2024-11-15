@@ -9,8 +9,8 @@ import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.widgets import SpanSelector
 
-data_path = "PZS/data/100001_ECG.dat"
-hz = 1000
+data_path = "PZS/data/16265.dat"
+hz = 128
 seconds = 10
 
 def load_data(data_path):
@@ -54,33 +54,33 @@ def detect_r_peaks_with_refined_threshold(processed_signal, sampling_rate, initi
     peaks, properties = find_peaks(filtered_processed_signal, height=initial_threshold, distance=min_distance)
 
     # Dynamic thresholding
-    SPKI = 0
-    NPKI = 0
-    Threshold_I1 = initial_threshold
-    Threshold_I2 = 0.5 * Threshold_I1
-    RR_intervals = []
+    signal_peak = 0
+    noise_peak = 0
+    threshold_high = initial_threshold
+    threshold_low = 0.5 * threshold_high
+    rr_intervals = []
     r_peaks = []
 
     for i, peak in enumerate(peaks):
-        if filtered_processed_signal[peak] > Threshold_I1:
-            SPKI = 0.125 * filtered_processed_signal[peak] + 0.875 * SPKI
+        if filtered_processed_signal[peak] > threshold_high:
+            signal_peak = 0.125 * filtered_processed_signal[peak] + 0.875 * signal_peak
             r_peaks.append(peak)
             if len(r_peaks) > 1:
-                RR_intervals.append(r_peaks[-1] - r_peaks[-2])
+                rr_intervals.append(r_peaks[-1] - r_peaks[-2])
         else:
-            NPKI = 0.125 * filtered_processed_signal[peak] + 0.875 * NPKI
+            noise_peak = 0.125 * filtered_processed_signal[peak] + 0.875 * noise_peak
 
-        Threshold_I1 = NPKI + 0.25 * (SPKI - NPKI)
+        threshold_high = noise_peak + 0.25 * (signal_peak - noise_peak)
 
     res = []
     
     for i, peak in enumerate(r_peaks):
-        distance = peak - r_peaks[i-1] if i > 0 else np.mean(RR_intervals)
-        if distance < 0.7 * np.mean(RR_intervals):
+        distance = peak - r_peaks[i-1] if i > 0 else np.mean(rr_intervals)
+        if distance < 0.7 * np.mean(rr_intervals):
             peak_amplitude = filtered_processed_signal[peak]
             mean_amplitude = np.mean(filtered_processed_signal[r_peaks])
             if peak_amplitude < 0.5 * mean_amplitude:
-                print(f"Suspicious peak amplitude detected at index {i} with amplitude {peak_amplitude}")
+                #print(f"Suspicious peak amplitude detected at index {i} with amplitude {peak_amplitude}")
                 continue
         res.append(peak)
 
@@ -126,7 +126,7 @@ old_ref_ecg = None
 
 segment_data = []
 
-for segment in segments[0:500]: #change later to segments
+for segment in segments: #change later to segments
     ref_ecg = refined_pan_tompkins_ecg_processing(segment, hz)
     r_peaks = detect_r_peaks_with_refined_threshold(ref_ecg, hz)
     bpm = len(r_peaks) / seconds * 60
@@ -139,7 +139,7 @@ bpm_reg = polymer_regression(np.arange(len(bpm_list)), bpm_list)
 root = tk.Tk()
 root.title("ECG Segment Viewer")
 
-fig, axs = plt.subplots(2, 2, figsize=(16, 6), gridspec_kw={'width_ratios': [3, 1]})
+fig, axs = plt.subplots(2, 2, figsize=(16, 6), gridspec_kw={'width_ratios': [2.5, 1.5]})
 canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -161,24 +161,41 @@ day_palette = {
     'hover_line_color': 'gray',
     'hover_text_color': 'gray',
     'highlight_color': 'red',
-    'highlight_alpha': 0.3
+    'highlight_alpha': 0.4
 }
 
 night_palette = {
-    'bg': '#2E2E2E',  # Dark gray background
-    'fg': '#E0E0E0',  # Light gray foreground
-    'plot_bg': '#1C1C1C',  # Almost black plot background
-    'plot_fg': '#F5F5F5',  # Off-white plot foreground
-    'line_color': '#00FF00',  # Bright green line color
-    'peak_color': '#FF4500',  # Bright orange color for peak markers
-    'button_bg': '#3A3A3A',  # Slightly lighter gray for buttons
-    'button_fg': '#E0E0E0',  # Light gray button text
-    'title_color': '#F5F5F5',  # Off-white title color
+    'bg': '#1E1E1E',  # Darker gray background
+    'fg': '#C0C0C0',  # Light gray foreground
+    'plot_bg': '#121212',  # Almost black plot background
+    'plot_fg': '#D3D3D3',  # Light gray plot foreground
+    'line_color': '#9370DB',  # Medium purple line color
+    'peak_color': '#FF6347',  # Tomato color for peak markers
+    'button_bg': '#2E2E2E',  # Dark gray for buttons
+    'button_fg': '#C0C0C0',  # Light gray button text
+    'title_color': '#D3D3D3',  # Light gray title color
+    'span_color': '#FF4500',  # Orange red for span selector
+    'hover_line_color': '#808080',  # Gray for hover line
+    'hover_text_color': '#808080',  # Gray for hover text
+    'highlight_color': '#FF4500',  # Orange red for highlight
+    'highlight_alpha': 0.4  # Transparency for highlight
+}
+
+legacy_black = {
+    'bg': 'black',
+    'fg': 'white',
+    'plot_bg': 'black',
+    'plot_fg': 'white',
+    'line_color': 'blue',
+    'peak_color': 'red',
+    'button_bg': 'black',
+    'button_fg': 'white',
+    'title_color': 'white',
     'span_color': 'red',
     'hover_line_color': 'gray',
     'hover_text_color': 'gray',
     'highlight_color': 'red',
-    'highlight_alpha': 0.3
+    'highlight_alpha': 0.4
 }
 
 current_palette = day_palette
@@ -192,13 +209,22 @@ def plot_segment(index, xlim=None, bpm_xlim=None):
     axs[0, 0].plot(time_axis, segment, color=palette['line_color'])
     axs[0, 0].plot(time_axis[r_peaks], segment[r_peaks], 'x', color=palette['peak_color'])
     axs[0, 0].set_title(f'Segment {index} (Raw)')
+    axs[0, 0].set_xlabel('Time (s)')
     axs[1, 0].plot(time_axis, ref_ecg, color=palette['line_color'])
     axs[1, 0].plot(time_axis[r_peaks], ref_ecg[r_peaks], 'x', color=palette['peak_color'])
     axs[1, 0].set_title(f'Segment {index} (Preprocessed)')
     axs[1, 0].set_xlabel('Time (s)')
+    
+    # Clamp xlim to where the signal starts and ends
+    signal_start = time_axis[0]
+    signal_end = time_axis[-1]
     if xlim:
+        xlim = (max(xlim[0], signal_start), min(xlim[1], signal_end))
         axs[0, 0].set_xlim(xlim)
         axs[1, 0].set_xlim(xlim)
+    else:
+        axs[0, 0].set_xlim(signal_start, signal_end)
+        axs[1, 0].set_xlim(signal_start, signal_end)
     
     axs[0, 0].set_facecolor(palette['plot_bg'])
     axs[0, 0].tick_params(colors=palette['plot_fg'])
@@ -218,10 +244,16 @@ def plot_segment(index, xlim=None, bpm_xlim=None):
     axs[0, 1].plot(bpm_list, color=palette['line_color'])
     axs[0, 1].plot(bpm_reg, color=palette['peak_color'])
     axs[0, 1].axvspan(index - 0.5, index + 0.5, color=palette['highlight_color'], alpha=palette['highlight_alpha'])
-    axs[0, 1].set_title('BPM')
-    print(bpm_xlim, index)
+    axs[0, 1].set_title('BPM over time')
+    axs[0, 1].set_xlabel(f'Segments (length {seconds}s)')
+
     if bpm_xlim:
         axs[0, 1].set_xlim(bpm_xlim)
+        if default and not bpm_xlim == default:
+            if bpm_xlim[0] < index < bpm_xlim[1]:
+                length = bpm_xlim[1] - bpm_xlim[0]
+                middle = index
+                axs[0, 1].set_xlim(middle - length / 2, middle + length / 2)
     axs[0, 1].set_facecolor(palette['plot_bg'])
     axs[0, 1].tick_params(colors=palette['plot_fg'])
     axs[0, 1].yaxis.label.set_color(palette['plot_fg'])
@@ -229,9 +261,12 @@ def plot_segment(index, xlim=None, bpm_xlim=None):
     axs[0, 1].title.set_color(palette['title_color'])
     # Display current BPM
     axs[1, 1].cla()
-    axs[1, 1].text(0.5, 0.5, f'Predicted BPM:\n{bpm_list[index]:.2f}', fontsize=14, ha='center', color=current_palette['fg'])
+    axs[1, 1].text(0.5, 0.5, f'Predicted segment BPM:\n{bpm_list[index]:.2f}\n\n\n\nPredicted signal BPM:\n{np.mean(bpm_list):.2f}', fontsize=14, ha='center', va='center', color=current_palette['fg'], transform=axs[1, 1].transAxes)
     axs[1, 1].set_axis_off()
     canvas.draw()
+
+    if not default:
+        fig.tight_layout()
 
 def on_key(event):
     global current_segment_index
@@ -248,8 +283,12 @@ def on_select(xmin, xmax):
     plot_segment(current_segment_index, bpm_xlim=bpm_xlim ,xlim=(xmin, xmax))
 
 def on_bpm_select(xmin, xmax):
+    if not xmax-xmin:
+        bpm_xlim = axs[0,1].get_xlim()
+    else:
+        bpm_xlim = (xmin, xmax)
     xlim = axs[0, 0].get_xlim()
-    plot_segment(current_segment_index, bpm_xlim=(xmin, xmax), xlim=xlim)
+    plot_segment(current_segment_index, bpm_xlim=bpm_xlim, xlim=xlim)
 
 def reset_zoom():
     plot_segment(current_segment_index)
@@ -261,6 +300,9 @@ def toggle_night_mode():
     root.configure(bg=current_palette['bg'])
     reset_button.configure(bg=current_palette['button_bg'], fg=current_palette['button_fg'])
     night_mode_button.configure(bg=current_palette['button_bg'], fg=current_palette['button_fg'], text="Toggle Day Mode" if is_night_mode else "Toggle Night Mode")
+    button_frame.configure(bg=current_palette['bg'])
+    segment_entry.configure(bg=current_palette['button_bg'], fg=current_palette['button_fg'])
+    jump_button.configure(bg=current_palette['button_bg'], fg=current_palette['button_fg'])
     plot_segment(current_segment_index)
 
 def on_bpm_click(event):
@@ -274,32 +316,57 @@ def on_bpm_click(event):
 
 def on_bpm_hover(event):
     if event.inaxes == axs[0, 1]:
-        for line in axs[0, 1].get_lines():
-            if line.get_linestyle() == '--':
-                line.remove()  # Clear previous hover lines
-        for text in axs[0, 1].texts:
-            text.remove()  # Clear previous hover text
         x = int(event.xdata)
         if 0 <= x < len(segment_data):
-            axs[0, 1].axvline(x=x, color=current_palette['hover_line_color'], linestyle='--')
-            axs[0, 1].text(x, axs[0, 1].get_ylim()[1], f'{x}', color=current_palette['hover_text_color'], verticalalignment='top')
-        canvas.draw_idle()
+            if not hasattr(on_bpm_hover, 'last_x') or on_bpm_hover.last_x != x:
+                on_bpm_hover.last_x = x
+                for line in axs[0, 1].get_lines():
+                    if line.get_linestyle() == '--':
+                        line.remove()  # Clear previous hover lines
+                for text in axs[0, 1].texts:
+                    text.remove()  # Clear previous hover text
+                axs[0, 1].axvline(x=x, color=current_palette['hover_line_color'], linestyle='--')
+                axs[0, 1].text(x, axs[0, 1].get_ylim()[1], f'{x}', color=current_palette['hover_text_color'], verticalalignment='top')
+                canvas.draw_idle()
+
+def jump_to_segment():
+    global current_segment_index
+    try:
+        index = int(segment_entry.get())
+        if 0 <= index < len(segment_data):
+            current_segment_index = index
+            bpm_xlim = axs[0, 1].get_xlim()
+            plot_segment(current_segment_index, bpm_xlim=bpm_xlim)
+            segment_entry.delete(0, tk.END)  # Clear the entry upon successful jump
+    except ValueError:
+        pass
 
 root.bind('<Key>', on_key)
 fig.canvas.mpl_connect('button_press_event', on_bpm_click)
 fig.canvas.mpl_connect('motion_notify_event', on_bpm_hover)
 
+default = None
 plot_segment(current_segment_index)
+default = axs[0, 1].get_xlim()
 
 span1 = SpanSelector(axs[0, 0], on_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=current_palette['span_color']))
 span2 = SpanSelector(axs[1, 0], on_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=current_palette['span_color']))
 span3 = SpanSelector(axs[0, 1], on_bpm_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=current_palette['span_color']))
+button_frame = tk.Frame(root, bg=current_palette['bg'])
+button_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
-reset_button = tk.Button(root, text="Reset Zoom", command=reset_zoom)
-reset_button.pack(side=tk.BOTTOM)
+reset_button = tk.Button(button_frame, text="Reset Zoom", command=reset_zoom, bg=current_palette['button_bg'], fg=current_palette['button_fg'])
+reset_button.pack(side=tk.LEFT, padx=10, pady=5)
 
-night_mode_button = tk.Button(root, text="Toggle Night Mode", command=toggle_night_mode)
-night_mode_button.pack(side=tk.BOTTOM)
+night_mode_button = tk.Button(button_frame, text="Toggle Night Mode", command=toggle_night_mode, bg=current_palette['button_bg'], fg=current_palette['button_fg'])
+night_mode_button.pack(side=tk.RIGHT, padx=10, pady=5)
+
+segment_entry = tk.Entry(button_frame, bg=current_palette['button_bg'], fg=current_palette['button_fg'])
+segment_entry.pack(side=tk.LEFT, padx=10, pady=5)
+segment_entry.bind('<Return>', lambda event: jump_to_segment())
+
+jump_button = tk.Button(button_frame, text="Jump to Segment", command=jump_to_segment, bg=current_palette['button_bg'], fg=current_palette['button_fg'])
+jump_button.pack(side=tk.LEFT, padx=10, pady=5)
 
 def on_closing():
     root.quit()
