@@ -1,77 +1,69 @@
 import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
+from scipy.signal import find_peaks, butter, filtfilt, detrend
 import scipy.signal as signal
 
 data_path = "PZS/data/100001_ECG.dat"
 hz = 1000
-seconds = 100
+seconds = 10
 
 def load_data(data_path):
     data = np.fromfile(data_path, dtype=np.int16)
     return data
 
-def load_annotated(annotation_path):
-    annotations = []
-    with open(annotation_path, 'r') as file:
-        for line in file:
-            if line.strip():  # Skip empty lines
-                annotations.append([int(x) if x.strip() else 0 for x in line.split(',')])
-    annotations = np.array(annotations)
-    consensus_annotations = annotations[:, :3]
-    annotator1_annotations = annotations[:, 3:6]
-    annotator2_annotations = annotations[:, 6:9]
-    annotator3_annotations = annotations[:, 9:12]
 
-    return consensus_annotations, annotator1_annotations, annotator2_annotations, annotator3_annotations
+def refined_pan_tompkins_ecg_processing(ecg_signal, sampling_rate, lowcut=1, highcut=30, filter_order=2, window_duration=0.12):
 
-con, a1, a2, a3 = load_annotated("PZS/data/100001_ANN.csv")
+    def bandpass_filter(signal, lowcut, highcut, fs, order):
+        nyquist = 0.5 * fs
+        low = lowcut / nyquist
+        high = highcut / nyquist
+        b, a = butter(order, [low, high], btype='band')
+        return filtfilt(b, a, signal)
 
-d = load_data(data_path)
+    filtered_signal = bandpass_filter(ecg_signal, lowcut, highcut, sampling_rate, filter_order)
+    differentiated_signal = np.diff(filtered_signal, prepend=filtered_signal[0])
+    squared_signal = differentiated_signal ** 2
+    window_size = int(window_duration * sampling_rate)
+    mwi_signal = np.convolve(squared_signal, np.ones(window_size) / window_size, mode='same')
 
+    return mwi_signal
 
-d = d[:hz*seconds]
-print(d)
+def detect_r_peaks_with_refined_threshold(processed_signal, sampling_rate, initial_threshold_factor=0.5):
 
-plt.plot(d)
-d = d - np.mean(d)
+    min_distance = int(sampling_rate * 60 / 250)  # Minimum distance corresponding to 250 BPM
+    initial_threshold = np.mean(processed_signal) + initial_threshold_factor * np.std(processed_signal)
+    peaks, properties = find_peaks(processed_signal, height=initial_threshold, distance=min_distance)
+    plt.plot(processed_signal)
+    plt.plot(peaks, processed_signal[peaks], 'x')
+    plt.show()
 
-sos = signal.butter(1, 0.5, 'hp', fs=hz, output='sos')
-d = signal.sosfilt(sos, d)
+    return peaks
 
-vrcholy, _ = signal.find_peaks(d, height=1200)
+ecg_signal = load_data(data_path)
+segments = np.array_split(ecg_signal, len(ecg_signal) // (hz * seconds))
+bpm_list = []
 
-min_vzdalenost = int(0.5 * hz)
-filtrovane_vrcholy = []
-posledni_vrchol = -min_vzdalenost
+for segment in segments:
+    ref_ecg = refined_pan_tompkins_ecg_processing(segment, hz)
+    r_peaks = detect_r_peaks_with_refined_threshold(ref_ecg, hz)
+    bpm = len(r_peaks) / seconds * 60
+    bpm_list.append(bpm)
+    if bpm < 50:
+        print(f"Segment with BPM < 50: {bpm}")
+        plt.plot(segment)
+        plt.plot(ref_ecg)
+        plt.plot(r_peaks, segment[r_peaks], 'x')
+        plt.show()
 
-for vrchol in vrcholy:
-    if vrchol - posledni_vrchol >= min_vzdalenost:
-        filtrovane_vrcholy.append(vrchol)
-        posledni_vrchol = vrchol
+# print(f"BPM list: {bpm_list}")
 
-beatu = len(filtrovane_vrcholy)
-minuty = seconds / 60
-pulses_per_minute = beatu / minuty
-
-print(f"BPM: {pulses_per_minute:.2f}")
-
-for annotation in con:
-    start, end, quality = annotation
-    if start < hz * seconds and end < hz * seconds:
-        if quality == 1:
-            color = 'green'
-        elif quality == 2:
-            color = 'yellow'
-        elif quality == 3:
-            color = 'red'
-        else:
-            color = 'blue'  # Default color for unexpected quality values
-        plt.axvspan(start, end, color=color, alpha=0.3)
-
-plt.plot(d)
-plt.plot(filtrovane_vrcholy, d[filtrovane_vrcholy], "x")
-plt.title("ECG Signál s Detekovanými Vrcholy")
-plt.xlabel("Číslo Vzorku")
-plt.ylabel("Amplituda")
+plt.figure(figsize=(12, 6))
+plt.plot(bpm_list)
+plt.xlabel('Segment')
+plt.ylabel('BPM')
+plt.title('BPM over time')
 plt.show()
-
