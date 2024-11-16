@@ -136,12 +136,13 @@ class ECGProcessor:
 
 
 class ECGSegmentViewer:
-    def __init__(self, root, segment_data, bpm_list, bpm_reg, seconds):
+    def __init__(self, root, segment_data, bpm_list, bpm_reg, seconds, config_manager):
         self.root = root
         self.segment_data = segment_data
         self.bpm_list = bpm_list
         self.bpm_reg = bpm_reg
         self.seconds = seconds
+        self.config_manager = config_manager
         self.current_segment_index = 0
         self.is_night_mode = False
         self.current_palette = self.day_palette
@@ -180,7 +181,6 @@ class ECGSegmentViewer:
         self.hint_button = tk.Button(self.button_frame, text="?", command=self.show_hint, bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
         self.hint_button.pack(side=tk.LEFT, padx=10, pady=5)
         self.hint_button.bind("<Button-1>", lambda event: self.hint_button.lift())
-
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -374,23 +374,46 @@ class ECGSegmentViewer:
         hint_window.focus_set()
 
     def on_closing(self):
-        self.root.quit()
+        self.config_manager.set("last_index", self.current_segment_index)
         self.root.destroy()
+
+class ConfigManager:
+    def __init__(self, config_file):
+        self.config_file = config_file
+        self.config = self.load_config()
+
+    def load_config(self):
+        if os.path.exists(self.config_file):
+            with open(self.config_file, "r") as file:
+                return json.load(file)
+        else:
+            return {}
+
+    def save_config(self):
+        with open(self.config_file, "w") as file:
+            json.dump(self.config, file)
+
+    def get(self, key, default=None):
+        return self.config.get(key, default)
+
+    def set(self, key, value):
+        self.config[key] = value
+        self.save_config()
+
 
 class ECGApp:
     def __init__(self, root):
         self.root = root
         self.root.title("ECG Processor")
 
-        self.config_file = "/home/pavel/py/school/PZS/ecg_config.json"
-        self.load_config()
+        self.config_manager = ConfigManager("ecg_config.json")
 
         self.file_label = tk.Label(root, text="Select ECG Data File:")
         self.file_label.pack(pady=5)
 
         self.file_entry = tk.Entry(root, width=50)
         self.file_entry.pack(pady=5)
-        self.file_entry.insert(0, self.config.get("last_path", ""))
+        self.file_entry.insert(0, self.config_manager.get("last_path", ""))
 
         self.browse_button = tk.Button(root, text="Browse", command=self.browse_file)
         self.browse_button.pack(pady=5)
@@ -400,7 +423,7 @@ class ECGApp:
 
         self.hz_entry = tk.Entry(root, width=10)
         self.hz_entry.pack(pady=5)
-        self.hz_entry.insert(0, self.config.get("last_hz", ""))
+        self.hz_entry.insert(0, self.config_manager.get("last_hz", ""))
         self.hz_entry.bind('<Return>', lambda event: self.process_button.invoke())
 
         self.process_button = tk.Button(root, text="Process", command=self.process_ecg)
@@ -410,17 +433,6 @@ class ECGApp:
         self.progress_bar = ttk.Progressbar(root, variable=self.progress, maximum=100)
         self.progress_bar.pack(pady=10, fill=tk.X)
 
-    def load_config(self):
-        if os.path.exists(self.config_file):
-            with open(self.config_file, "r") as file:
-                self.config = json.load(file)
-        else:
-            self.config = {}
-
-    def save_config(self):
-        with open(self.config_file, "w") as file:
-            json.dump(self.config, file)
-
     def browse_file(self):
         file_path = tk.filedialog.askopenfilename(filetypes=[("ECG Data Files", "*.dat")])
         if file_path:
@@ -428,13 +440,13 @@ class ECGApp:
             self.file_entry.insert(0, file_path)
 
     def process_ecg(self):
+        self.progress.set(0)
         data_path = self.file_entry.get()
         hz = int(self.hz_entry.get())
         seconds = 10
 
-        self.config["last_path"] = data_path
-        self.config["last_hz"] = hz
-        self.save_config()
+        self.config_manager.set("last_path", data_path)
+        self.config_manager.set("last_hz", hz)
 
         self.ecg_processor = ECGProcessor(data_path, hz, seconds)
         self.root.after(100, self.update_progress)
@@ -446,8 +458,8 @@ class ECGApp:
 
         viewer_root = tk.Toplevel(self.root)
         viewer_root.title("ECG Segment Viewer")
-        ecg_viewer = ECGSegmentViewer(viewer_root, segment_data, bpm_list, bpm_reg, seconds)
-        ecg_viewer.current_segment_index = self.config.get("last_index", 0)
+        ecg_viewer = ECGSegmentViewer(viewer_root, segment_data, bpm_list, bpm_reg, seconds, self.config_manager)
+        ecg_viewer.current_segment_index = self.config_manager.get("last_index", 0)
         ecg_viewer.plot_segment(ecg_viewer.current_segment_index)
 
     def update_progress(self):
@@ -459,8 +471,9 @@ class ECGApp:
             self.progress.set(100)
 
     def on_closing(self):
-        self.config["last_index"] = self.ecg_viewer.current_segment_index
-        self.save_config()
+        if hasattr(self, 'ecg_viewer'):
+            self.config_manager.set("last_index", self.ecg_viewer.current_segment_index)
+        print("Closing")
         self.root.quit()
         self.root.destroy()
 
