@@ -393,6 +393,7 @@ class ECGApp:
     def __init__(self, root):
         self.root = root
         self.root.title("ECG Processor")
+        self.root.resizable(False, False)
 
         self.config_manager = ConfigManager("ecg_config.json")
 
