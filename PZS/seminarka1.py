@@ -11,6 +11,7 @@ from matplotlib.widgets import SpanSelector
 from tkinter import ttk
 import os
 import json
+import threading
 
 class ECGProcessor:
     def __init__(self, data_path, hz, seconds):
@@ -120,19 +121,6 @@ class ECGProcessor:
 
         print(f"Best degree: {best_degree} with R2: {best_r2}")
         return best_y_pred
-
-    def process(self):
-        ecg_signal = self.load_data()
-        segments = np.array_split(ecg_signal, len(ecg_signal) // (self.hz * self.seconds))
-
-        for segment in segments:
-            ref_ecg = self.refined_pan_tompkins_ecg_processing(segment)
-            r_peaks = self.detect_r_peaks_with_refined_threshold(ref_ecg)
-            bpm = len(r_peaks) / self.seconds * 60
-            self.bpm_list.append(bpm)
-            self.segment_data.append((segment, ref_ecg, r_peaks))
-
-        self.bpm_reg = self.polymer_regression(np.arange(len(self.bpm_list)), self.bpm_list)
 
 
 class ECGSegmentViewer:
@@ -433,7 +421,12 @@ class ECGApp:
         self.progress_bar = ttk.Progressbar(root, variable=self.progress, maximum=100)
         self.progress_bar.pack(pady=10, fill=tk.X)
 
+        self.progress_label = tk.Label(root, text="")
+        self.progress_label.pack(pady=0)
+
     def browse_file(self):
+        self.progress_label.config(text="")
+        self.progress_bar.set(0)
         file_path = tk.filedialog.askopenfilename(filetypes=[("ECG Data Files", "*.dat")])
         if file_path:
             self.file_entry.delete(0, tk.END)
@@ -441,6 +434,7 @@ class ECGApp:
 
     def process_ecg(self):
         self.progress.set(0)
+        self.progress_label.config(text="Loading data...")
         data_path = self.file_entry.get()
         hz = int(self.hz_entry.get())
         seconds = 10
@@ -448,27 +442,54 @@ class ECGApp:
         self.config_manager.set("last_path", data_path)
         self.config_manager.set("last_hz", hz)
 
-        self.ecg_processor = ECGProcessor(data_path, hz, seconds)
-        self.root.after(100, self.update_progress)
-        self.ecg_processor.process()
+        def run_processor():
+            self.ecg_processor = ECGProcessor(data_path, hz, seconds)
+            ecg_signal = self.ecg_processor.load_data()
+            segments = np.array_split(ecg_signal, len(ecg_signal) // (self.ecg_processor.hz * self.ecg_processor.seconds))
 
-        segment_data = self.ecg_processor.segment_data
-        bpm_list = self.ecg_processor.bpm_list
-        bpm_reg = self.ecg_processor.bpm_reg
+            total_steps = 100
+            step_interval = max(1, len(segments) // total_steps)
 
-        viewer_root = tk.Toplevel(self.root)
-        viewer_root.title("ECG Segment Viewer")
-        ecg_viewer = ECGSegmentViewer(viewer_root, segment_data, bpm_list, bpm_reg, seconds, self.config_manager)
-        ecg_viewer.current_segment_index = self.config_manager.get("last_index", 0)
-        ecg_viewer.plot_segment(ecg_viewer.current_segment_index)
+            for i, segment in enumerate(segments):
+                self.progress_label.config(text=f"Processing segment {i + 1}/{len(segments)}")
+                ref_ecg = self.ecg_processor.refined_pan_tompkins_ecg_processing(segment)
+                r_peaks = self.ecg_processor.detect_r_peaks_with_refined_threshold(ref_ecg)
+                bpm = len(r_peaks) / self.ecg_processor.seconds * 60
+                self.ecg_processor.bpm_list.append(bpm)
+                self.ecg_processor.segment_data.append((segment, ref_ecg, r_peaks))
+                if i % step_interval == 0:  # Update progress bar at intervals
+                    self.progress.set((i / len(segments)) * 100)
+                    self.root.update_idletasks()
 
-    def update_progress(self):
-        # Simulate progress update
-        self.progress.set(self.progress.get() + 10)
-        if self.progress.get() < 100:
-            self.root.after(100, self.update_progress)
-        else:
+            self.ecg_processor.bpm_reg = self.ecg_processor.polymer_regression(np.arange(len(self.ecg_processor.bpm_list)), self.ecg_processor.bpm_list)
             self.progress.set(100)
+            self.progress_label.config(text="Processing complete")
+            self.root.after(0, show_viewer)
+
+        def show_viewer():
+            segment_data = self.ecg_processor.segment_data
+            bpm_list = self.ecg_processor.bpm_list
+            bpm_reg = self.ecg_processor.bpm_reg
+
+            viewer_root = tk.Toplevel(self.root)
+            viewer_root.title("ECG Segment Viewer")
+            ecg_viewer = ECGSegmentViewer(viewer_root, segment_data, bpm_list, bpm_reg, seconds, self.config_manager)
+            ecg_viewer.current_segment_index = self.config_manager.get("last_index", 0)
+            ecg_viewer.plot_segment(ecg_viewer.current_segment_index)
+
+            # Enable buttons and entry lines after processing is done
+            self.file_entry.config(state=tk.NORMAL)
+            self.browse_button.config(state=tk.NORMAL)
+            self.hz_entry.config(state=tk.NORMAL)
+            self.process_button.config(state=tk.NORMAL)
+
+        # Disable buttons and entry lines during processing
+        self.file_entry.config(state=tk.DISABLED)
+        self.browse_button.config(state=tk.DISABLED)
+        self.hz_entry.config(state=tk.DISABLED)
+        self.process_button.config(state=tk.DISABLED)
+
+        threading.Thread(target=run_processor).start()
 
     def on_closing(self):
         if hasattr(self, 'ecg_viewer'):
