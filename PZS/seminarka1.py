@@ -80,16 +80,28 @@ class ECGProcessor:
                 noise_peak = 0.125 * filtered_processed_signal[peak] + 0.875 * noise_peak
 
             threshold_high = noise_peak + 0.25 * (signal_peak - noise_peak)
+        
+        # plt.plot(filtered_processed_signal)
+        # plt.plot(peaks, filtered_processed_signal[peaks], 'x')
+        # plt.show()
 
         res = []
+        if r_peaks:
+            max_peak = np.argmax(filtered_processed_signal[r_peaks])
+            res.append(r_peaks.pop(max_peak))
         
         for i, peak in enumerate(r_peaks):
             distance = peak - r_peaks[i-1] if i > 0 else np.mean(rr_intervals)
+            mean_amplitude = np.mean(filtered_processed_signal[r_peaks])
+            peak_amplitude = filtered_processed_signal[peak]
+
             if distance < 0.7 * np.mean(rr_intervals):
-                peak_amplitude = filtered_processed_signal[peak]
-                mean_amplitude = np.mean(filtered_processed_signal[r_peaks])
+
                 if peak_amplitude < 0.5 * mean_amplitude:
                     continue
+            elif peak_amplitude < 0.4 * mean_amplitude:
+                continue
+            
             res.append(peak)
 
         return np.array(res)
@@ -207,6 +219,8 @@ class ECGSegmentViewer:
     }
 
     def plot_segment(self, index, xlim=None, bpm_xlim=None):
+        if index >= len(self.segment_data):
+            index = 0
         segment, ref_ecg, r_peaks = self.segment_data[index]
         time_axis = np.linspace(index * self.seconds, (index + 1) * self.seconds, len(segment))
         self.axs[0, 0].cla()
@@ -413,9 +427,9 @@ class ECGApp:
         self.hz_entry = tk.Entry(root, width=10)
         self.hz_entry.pack(pady=5)
         self.hz_entry.insert(0, self.config_manager.get("last_hz", ""))
-        self.hz_entry.bind('<Return>', lambda event: self.process_button.invoke())
+        self.hz_entry.bind('<Return>', self.validate_and_process)
 
-        self.process_button = tk.Button(root, text="Process", command=self.process_ecg)
+        self.process_button = tk.Button(root, text="Process", command=self.validate_and_process)
         self.process_button.pack(pady=10)
 
         self.progress = tk.DoubleVar()
@@ -424,10 +438,21 @@ class ECGApp:
 
         self.progress_label = tk.Label(root, text="")
         self.progress_label.pack(pady=0)
+    
+    def validate_and_process(self, _ = None):
+        try:
+            hz = self.hz_entry.get()
+            if not hz:
+                raise ValueError("Frequency must be specified")
+            elif int(hz) <= 0:
+                raise ValueError("Frequency must be positive")
+            self.process_ecg()
+        except ValueError as e:
+            self.progress_label.config(text=f"Invalid frequency: {e}")
 
     def browse_file(self):
         self.progress_label.config(text="")
-        self.progress_bar.set(0)
+        self.progress.set(0)
         file_path = tk.filedialog.askopenfilename(filetypes=[("ECG Data Files", "*.dat")])
         if file_path:
             self.file_entry.delete(0, tk.END)
