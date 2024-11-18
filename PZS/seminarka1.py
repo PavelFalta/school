@@ -21,18 +21,31 @@ class ECGProcessor:
         self.segment_data = []
         self.bpm_list = []
         self.bpm_reg = None
+        self.prev_min = None
+        self.bpm_tag = []
 
     def load_data(self):
         data = np.fromfile(self.data_path, dtype=np.int16)
         return data
 
-    def refined_pan_tompkins_ecg_processing(self, ecg_signal, lowcut=1, highcut=30, filter_order=2, window_duration=0.12):
+    def pan_tompkins(self, i, ecg_signal, lowcut=1, highcut=30, filter_order=2, window_duration=0.12):
         def bandpass_filter(signal, lowcut, highcut, fs, order):
             nyquist = 0.5 * fs
             low = lowcut / nyquist
             high = highcut / nyquist
             b, a = butter(order, [low, high], btype='band')
             return filtfilt(b, a, signal)
+        
+        # print(f"{i}: {np.max(ecg_signal)}, {np.mean(ecg_signal)}, {np.std(ecg_signal)}")
+        # if np.max(ecg_signal) < 1000:
+        #     self.bpm_tag.append(i)
+        if not self.prev_min:
+            self.prev_min = np.min(ecg_signal)
+        elif np.min(ecg_signal) > 0.5 * self.prev_min:
+            print(f"Tagging segment {i} with min {np.min(ecg_signal)}")
+            self.bpm_tag.append(i)
+        else:
+            self.prev_min = (self.prev_min + np.min(ecg_signal)) / 2
 
         filtered_signal = bandpass_filter(ecg_signal, lowcut, highcut, self.hz, filter_order)
         differentiated_signal = np.diff(filtered_signal, prepend=filtered_signal[0])
@@ -42,7 +55,7 @@ class ECGProcessor:
 
         return mwi_signal
 
-    def detect_r_peaks_with_refined_threshold(self, processed_signal, initial_threshold_factor=0.5):
+    def detect_r_peaks(self, processed_signal, initial_threshold_factor=0.5):
         min_distance = int(self.hz * 60 / 250)  # Minimum distance corresponding to 250 BPM
 
         # Calculate the median and MAD for initial threshold
@@ -66,7 +79,6 @@ class ECGProcessor:
         signal_peak = 0
         noise_peak = 0
         threshold_high = initial_threshold
-        threshold_low = 0.5 * threshold_high
         rr_intervals = []
         r_peaks = []
 
@@ -80,10 +92,6 @@ class ECGProcessor:
                 noise_peak = 0.125 * filtered_processed_signal[peak] + 0.875 * noise_peak
 
             threshold_high = noise_peak + 0.25 * (signal_peak - noise_peak)
-        
-        # plt.plot(filtered_processed_signal)
-        # plt.plot(peaks, filtered_processed_signal[peaks], 'x')
-        # plt.show()
 
         res = []
         if r_peaks:
@@ -136,16 +144,20 @@ class ECGProcessor:
 
 
 class ECGSegmentViewer:
-    def __init__(self, root, segment_data, bpm_list, bpm_reg, seconds, config_manager):
+    def __init__(self, root, segment_data, bpm_list, bpm_reg, bpm_tag, seconds, config_manager, file_entry):
         self.root = root
         self.segment_data = segment_data
         self.bpm_list = bpm_list
         self.bpm_reg = bpm_reg
+        self.bpm_tag = bpm_tag
         self.seconds = seconds
         self.config_manager = config_manager
+        self.file_entry = file_entry
         self.current_segment_index = 0
         self.is_night_mode = False
         self.current_palette = self.day_palette
+
+        self.root.title(f"ECGViewer - {os.path.basename(self.file_entry)}")
 
         self.fig, self.axs = plt.subplots(2, 2, figsize=(16, 6), gridspec_kw={'width_ratios': [2.5, 1.5]})
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
@@ -262,6 +274,15 @@ class ECGSegmentViewer:
         self.axs[0, 1].plot(self.bpm_list, color=palette['line_color'], label='Segment BPM')
         self.axs[0, 1].plot(self.bpm_reg, color=palette['peak_color'], label='Regression Line')
         self.axs[0, 1].legend()
+        if self.bpm_tag:
+            first_tag = self.bpm_tag[0]
+            last_tag = self.bpm_tag[-1]
+            if first_tag == last_tag:
+                self.axs[0, 1].axvline(x=first_tag, color=palette['peak_color'], alpha=0.2)
+                self.axs[0, 1].text(first_tag, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
+            else:
+                self.axs[0, 1].axvspan(first_tag, last_tag, color=palette['peak_color'], alpha=0.2)
+                self.axs[0, 1].text((first_tag + last_tag) / 2, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
         self.axs[0, 1].axvspan(index - 0.5, index + 0.5, color=palette['highlight_color'], alpha=palette['highlight_alpha'])
         self.axs[0, 1].set_title('BPM over time')
         self.axs[0, 1].set_xlabel(f'Segments (length {self.seconds}s)')
@@ -280,7 +301,8 @@ class ECGSegmentViewer:
         self.axs[0, 1].title.set_color(palette['title_color'])
 
         self.axs[1, 1].cla()
-        self.axs[1, 1].text(0.5, 0.5, f'Predicted segment BPM:\n{self.bpm_list[index]:.2f}\n\n\n\nPredicted signal BPM:\n{np.mean(self.bpm_list):.2f}', fontsize=14, ha='center', va='center', color=self.current_palette['fg'], transform=self.axs[1, 1].transAxes)
+        mean = np.mean(self.bpm_list[:self.bpm_tag[0]]) if self.bpm_tag else np.mean(self.bpm_list)
+        self.axs[1, 1].text(0.5, 0.5, f'Predicted segment BPM:\n{self.bpm_list[index]:.2f}\n\n\n\nPredicted signal BPM:\n{mean:.2f}', fontsize=14, ha='center', va='center', color=self.current_palette['fg'], transform=self.axs[1, 1].transAxes)
         self.axs[1, 1].set_axis_off()
         self.canvas.draw()
 
@@ -341,7 +363,8 @@ class ECGSegmentViewer:
                         if line.get_linestyle() == '--':
                             line.remove()
                     for text in self.axs[0, 1].texts:
-                        text.remove()
+                        if not text.get_text() == 'Invalid Signal':
+                            text.remove()
                     self.axs[0, 1].axvline(x=x, color=self.current_palette['hover_line_color'], linestyle='--')
                     self.axs[0, 1].text(x, self.axs[0, 1].get_ylim()[1], f'{x}', color=self.current_palette['hover_text_color'], verticalalignment='top')
                     self.canvas.draw_idle()
@@ -363,6 +386,7 @@ class ECGSegmentViewer:
             "- Use 'a' or 'Left Arrow' to go to the previous segment.\n"
             "- Use 'd' or 'Right Arrow' to go to the next segment.\n"
             "- Double-click on the BPM plot to jump to a specific segment.\n"
+            "- Click and drag over any plot to zoom in on a specific range.\n"
             "- Use the 'Reset Zoom' button to reset the zoom level.\n"
             "- Use the 'Toggle Night Mode' button to switch between day and night modes.\n"
             "- Enter a segment number and press 'Jump to Segment' to jump to a specific segment."
@@ -453,7 +477,8 @@ class ECGApp:
     def browse_file(self):
         self.progress_label.config(text="")
         self.progress.set(0)
-        file_path = tk.filedialog.askopenfilename(filetypes=[("ECG Data Files", "*.dat")])
+        initial_dir = os.path.dirname(self.config_manager.get("last_path", ""))
+        file_path = tk.filedialog.askopenfilename(initialdir=initial_dir, filetypes=[("ECG Data Files", "*.dat")])
         if file_path:
             self.file_entry.delete(0, tk.END)
             self.file_entry.insert(0, file_path)
@@ -477,9 +502,9 @@ class ECGApp:
             step_interval = max(1, len(segments) // total_steps)
 
             for i, segment in enumerate(segments):
-                self.progress_label.config(text=f"Processing segment {i + 1}/{len(segments)}")
-                ref_ecg = self.ecg_processor.refined_pan_tompkins_ecg_processing(segment)
-                r_peaks = self.ecg_processor.detect_r_peaks_with_refined_threshold(ref_ecg)
+                self.progress_label.config(text=f"Detecting peaks {i + 1}/{len(segments)}")
+                ref_ecg = self.ecg_processor.pan_tompkins(i,segment)
+                r_peaks = self.ecg_processor.detect_r_peaks(ref_ecg)
                 bpm = len(r_peaks) / self.ecg_processor.seconds * 60
                 self.ecg_processor.bpm_list.append(bpm)
                 self.ecg_processor.segment_data.append((segment, ref_ecg, r_peaks))
@@ -487,7 +512,9 @@ class ECGApp:
                     self.progress.set((i / len(segments)) * 100)
                     self.root.update_idletasks()
 
-            self.ecg_processor.bpm_reg = self.ecg_processor.polymer_regression(np.arange(len(self.ecg_processor.bpm_list)), self.ecg_processor.bpm_list)
+            bpm_list = self.ecg_processor.bpm_list[:self.ecg_processor.bpm_tag[0]] if self.ecg_processor.bpm_tag else self.ecg_processor.bpm_list
+
+            self.ecg_processor.bpm_reg = self.ecg_processor.polymer_regression(np.arange(len(bpm_list)), bpm_list)
             self.progress.set(100)
             self.progress_label.config(text="Processing complete")
             self.root.after(0, show_viewer)
@@ -496,10 +523,11 @@ class ECGApp:
             segment_data = self.ecg_processor.segment_data
             bpm_list = self.ecg_processor.bpm_list
             bpm_reg = self.ecg_processor.bpm_reg
+            bpm_tag = self.ecg_processor.bpm_tag
 
             viewer_root = tk.Toplevel(self.root)
             viewer_root.title("ECG Segment Viewer")
-            ecg_viewer = ECGSegmentViewer(viewer_root, segment_data, bpm_list, bpm_reg, seconds, self.config_manager)
+            ecg_viewer = ECGSegmentViewer(viewer_root, segment_data, bpm_list, bpm_reg, bpm_tag, seconds, self.config_manager, self.file_entry.get())
             ecg_viewer.current_segment_index = self.config_manager.get("last_index", 0)
             ecg_viewer.plot_segment(ecg_viewer.current_segment_index)
 
