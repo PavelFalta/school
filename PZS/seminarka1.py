@@ -21,7 +21,7 @@ class ECGProcessor:
         self.segment_data = []
         self.bpm_list = []
         self.bpm_reg = None
-        self.prev_min = None
+        self.prev_std = []
         self.bpm_tag = []
 
     def load_data(self):
@@ -39,19 +39,20 @@ class ECGProcessor:
         # print(f"{i}: {np.max(ecg_signal)}, {np.mean(ecg_signal)}, {np.std(ecg_signal)}")
         # if np.max(ecg_signal) < 1000:
         #     self.bpm_tag.append(i)
-        if not self.prev_min:
-            self.prev_min = np.min(ecg_signal)
-        elif np.min(ecg_signal) > 0.5 * self.prev_min:
-            print(f"Tagging segment {i} with min {np.min(ecg_signal)}")
-            self.bpm_tag.append(i)
-        else:
-            self.prev_min = (self.prev_min + np.min(ecg_signal)) / 2
 
         filtered_signal = bandpass_filter(ecg_signal, lowcut, highcut, self.hz, filter_order)
         differentiated_signal = np.diff(filtered_signal, prepend=filtered_signal[0])
         squared_signal = differentiated_signal ** 2
         window_size = int(window_duration * self.hz)
         mwi_signal = np.convolve(squared_signal, np.ones(window_size) / window_size, mode='same')
+        
+        #print(f"{i}: {np.std(mwi_signal)} vs {0.005 * np.mean(self.prev_std)}")
+
+        if i > 20 and np.std(mwi_signal) < 0.01 * np.mean(self.prev_std):
+            print(f"Invalid signal: {i}, {np.std(mwi_signal)} is less than 0.5 * {np.mean(self.prev_std)}")
+            self.bpm_tag.append(i)
+        else:
+            self.prev_std.append(np.std(mwi_signal))
 
         return mwi_signal
 
@@ -203,6 +204,7 @@ class ECGSegmentViewer:
         'plot_fg': 'black',
         'line_color': 'blue',
         'peak_color': 'red',
+        'bpm_color': '#39FF14',
         'button_bg': 'white',
         'button_fg': 'black',
         'title_color': 'black',
@@ -220,6 +222,7 @@ class ECGSegmentViewer:
         'plot_fg': '#D3D3D3',
         'line_color': '#9370DB',
         'peak_color': '#FF6347',
+        'bpm_color': '#39FF14',
         'button_bg': '#2E2E2E',
         'button_fg': '#C0C0C0',
         'title_color': '#D3D3D3',
@@ -242,10 +245,13 @@ class ECGSegmentViewer:
         self.axs[0, 0].plot(time_axis[r_peaks], segment[r_peaks], 'x', color=palette['peak_color'])
         self.axs[0, 0].set_title(f'Segment {index} (Raw)')
         self.axs[0, 0].set_xlabel('Time (s)')
+        self.axs[0, 0].set_ylabel('Amplitude')
         self.axs[1, 0].plot(time_axis, ref_ecg, color=palette['line_color'])
         self.axs[1, 0].plot(time_axis[r_peaks], ref_ecg[r_peaks], 'x', color=palette['peak_color'])
         self.axs[1, 0].set_title(f'Segment {index} (Preprocessed)')
         self.axs[1, 0].set_xlabel('Time (s)')
+        self.axs[1, 0].set_ylabel('Amplitude')
+        self.fig.tight_layout()
 
         signal_start = time_axis[0]
         signal_end = time_axis[-1]
@@ -272,6 +278,7 @@ class ECGSegmentViewer:
 
         self.axs[0, 1].cla()
         self.axs[0, 1].plot(self.bpm_list, color=palette['line_color'], label='Segment BPM')
+        self.axs[0, 1].axhline(y=np.mean(self.bpm_list), color=palette['bpm_color'], label='Mean BPM', alpha=0.9, linewidth=2)
         self.axs[0, 1].plot(self.bpm_reg, color=palette['peak_color'], label='Regression Line')
         self.axs[0, 1].legend()
         if self.bpm_tag:
@@ -281,11 +288,13 @@ class ECGSegmentViewer:
                 self.axs[0, 1].axvline(x=first_tag, color=palette['peak_color'], alpha=0.2)
                 self.axs[0, 1].text(first_tag, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
             else:
-                self.axs[0, 1].axvspan(first_tag, last_tag, color=palette['peak_color'], alpha=0.2)
+                self.axs[0, 1].axvspan(first_tag-1, last_tag, color=palette['peak_color'], alpha=0.2)
                 self.axs[0, 1].text((first_tag + last_tag) / 2, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
         self.axs[0, 1].axvspan(index - 0.5, index + 0.5, color=palette['highlight_color'], alpha=palette['highlight_alpha'])
         self.axs[0, 1].set_title('BPM over time')
         self.axs[0, 1].set_xlabel(f'Segments (length {self.seconds}s)')
+        self.axs[0, 1].set_ylabel('BPM')
+        self.axs[0, 1].yaxis.set_label_coords(-0.1, 0.5)
 
         if bpm_xlim:
             self.axs[0, 1].set_xlim(bpm_xlim)
@@ -456,6 +465,15 @@ class ECGApp:
         self.process_button = tk.Button(root, text="Process", command=self.validate_and_process)
         self.process_button.pack(pady=10)
 
+        self.mode_label = tk.Label(root, text="Select Mode:")
+        self.mode_label.pack(pady=5)
+
+        self.mode_var = tk.StringVar(value="peak_detection")
+        self.peak_detection_radio = tk.Radiobutton(root, text="Peak Detection", variable=self.mode_var, value="peak_detection")
+        self.peak_detection_radio.pack(pady=5)
+        self.quality_classifier_radio = tk.Radiobutton(root, text="Quality Classifier", variable=self.mode_var, value="quality_classifier")
+        self.quality_classifier_radio.pack(pady=5)
+
         self.progress = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(root, variable=self.progress, maximum=100)
         self.progress_bar.pack(pady=10, fill=tk.X)
@@ -511,6 +529,23 @@ class ECGApp:
                 if i % step_interval == 0:  # Update progress bar at intervals
                     self.progress.set((i / len(segments)) * 100)
                     self.root.update_idletasks()
+            
+            filtered_bpm_tag = []
+            segment_start = None
+
+            for i in range(len(self.ecg_processor.bpm_tag)):
+                if segment_start is None:
+                    segment_start = self.ecg_processor.bpm_tag[i]
+                if i == len(self.ecg_processor.bpm_tag) - 1 or self.ecg_processor.bpm_tag[i + 1] - self.ecg_processor.bpm_tag[i] > 50:
+                    if i - self.ecg_processor.bpm_tag.index(segment_start) >= 2:
+                        filtered_bpm_tag.append(segment_start)
+                        filtered_bpm_tag.append(self.ecg_processor.bpm_tag[i])
+                    segment_start = None
+
+            print(self.ecg_processor.bpm_tag)
+            print("\n")
+            print(filtered_bpm_tag)
+            self.ecg_processor.bpm_tag = filtered_bpm_tag
 
             bpm_list = self.ecg_processor.bpm_list[:self.ecg_processor.bpm_tag[0]] if self.ecg_processor.bpm_tag else self.ecg_processor.bpm_list
 
