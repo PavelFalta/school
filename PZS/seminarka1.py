@@ -23,6 +23,7 @@ class ECGProcessor:
         self.bpm_reg = None
         self.prev_std = []
         self.bpm_tag = []
+        self.last_peak_num = 0
 
     def load_data(self):
         data = np.fromfile(self.data_path, dtype=np.int16)
@@ -112,6 +113,16 @@ class ECGProcessor:
                 continue
             
             res.append(peak)
+        
+        if self.last_peak_num:
+            while len(res) > self.last_peak_num + 2:
+                min_peak_index = np.argmin(filtered_processed_signal[res])
+                res.pop(min_peak_index)
+            while len(res) < self.last_peak_num - 2:
+                max_peak_index = np.argmax(filtered_processed_signal[peaks])
+                res.append(peaks[max_peak_index])
+                peaks = np.delete(peaks, max_peak_index)
+        self.last_peak_num = len(res)
 
         return np.array(res)
 
@@ -278,7 +289,7 @@ class ECGSegmentViewer:
 
         self.axs[0, 1].cla()
         self.axs[0, 1].plot(self.bpm_list, color=palette['line_color'], label='Segment BPM')
-        self.axs[0, 1].axhline(y=np.mean(self.bpm_list), color=palette['bpm_color'], label='Mean BPM', alpha=0.9, linewidth=2)
+        self.axs[0, 1].axhline(y=np.mean(self.bpm_list), color=palette['bpm_color'], label='Mean BPM', alpha=0.9, linewidth=3)
         self.axs[0, 1].plot(self.bpm_reg, color=palette['peak_color'], label='Regression Line')
         self.axs[0, 1].legend()
         if self.bpm_tag:
@@ -286,15 +297,14 @@ class ECGSegmentViewer:
             last_tag = self.bpm_tag[-1]
             if first_tag == last_tag:
                 self.axs[0, 1].axvline(x=first_tag, color=palette['peak_color'], alpha=0.2)
-                self.axs[0, 1].text(first_tag, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
+                #self.axs[0, 1].text(first_tag, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
             else:
                 self.axs[0, 1].axvspan(first_tag-1, last_tag, color=palette['peak_color'], alpha=0.2)
-                self.axs[0, 1].text((first_tag + last_tag) / 2, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
+                #self.axs[0, 1].text((first_tag + last_tag) / 2, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
         self.axs[0, 1].axvspan(index - 0.5, index + 0.5, color=palette['highlight_color'], alpha=palette['highlight_alpha'])
         self.axs[0, 1].set_title('BPM over time')
         self.axs[0, 1].set_xlabel(f'Segments (length {self.seconds}s)')
         self.axs[0, 1].set_ylabel('BPM')
-        self.axs[0, 1].yaxis.set_label_coords(-0.1, 0.5)
 
         if bpm_xlim:
             self.axs[0, 1].set_xlim(bpm_xlim)
@@ -465,9 +475,6 @@ class ECGApp:
         self.process_button = tk.Button(root, text="Process", command=self.validate_and_process)
         self.process_button.pack(pady=10)
 
-        self.mode_label = tk.Label(root, text="Select Mode:")
-        self.mode_label.pack(pady=5)
-
         self.mode_var = tk.StringVar(value="peak_detection")
         self.peak_detection_radio = tk.Radiobutton(root, text="Peak Detection", variable=self.mode_var, value="peak_detection")
         self.peak_detection_radio.pack(pady=5)
@@ -571,14 +578,21 @@ class ECGApp:
             self.browse_button.config(state=tk.NORMAL)
             self.hz_entry.config(state=tk.NORMAL)
             self.process_button.config(state=tk.NORMAL)
+            self.peak_detection_radio.config(state=tk.NORMAL)
+            self.quality_classifier_radio.config(state=tk.NORMAL)
 
-        # Disable buttons and entry lines during processing
+        # Disable buttons, entry lines, and radios during processing
         self.file_entry.config(state=tk.DISABLED)
         self.browse_button.config(state=tk.DISABLED)
         self.hz_entry.config(state=tk.DISABLED)
         self.process_button.config(state=tk.DISABLED)
+        self.peak_detection_radio.config(state=tk.DISABLED)
+        self.quality_classifier_radio.config(state=tk.DISABLED)
 
-        threading.Thread(target=run_processor).start()
+        if self.mode_var.get() == "peak_detection":
+            threading.Thread(target=run_processor).start()
+        elif self.mode_var.get() == "quality_classifier":
+            ...
 
     def on_closing(self):
         if hasattr(self, 'ecg_viewer'):
