@@ -17,6 +17,11 @@ from sklearn.cluster import KMeans
 import random
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import entropy
+import numpy as np
+import pandas as pd
+from scipy import signal
+
 
 class ECGPeakDetector:
     def __init__(self, data_path, hz, seconds):
@@ -177,28 +182,47 @@ class ECGClusterer:
         window_size = self.hz * self.seconds
         segments = [data[i:i + window_size] for i in range(0, len(data), window_size)]
 
-        # Extract features from each segment
         features = []
+
+        f_nyquist = self.hz / 2  # Nyquist frequency
+
+        # Dynamic frequency band definitions
+        vlf_band = (0.003 * f_nyquist, 0.04 * f_nyquist)
+        lf_band = (0.04 * f_nyquist, 0.15 * f_nyquist)
+        hf_band = (0.15 * f_nyquist, 0.4 * f_nyquist)
+
         for segment in segments:
-            # Perform frequency analysis using Welch's method
-            freqs, psd = signal.welch(segment, fs=self.hz)
-            
-            # Calculate total power
+            # Perform Welch's method
+            freqs, psd = signal.welch(segment, fs=self.hz, nperseg=1024)
+
+            # Total power
             total_power = np.sum(psd)
+            if total_power == 0:
+                print("Warning: Total power is zero for this segment.")
+                continue
+
+            # Dynamic power calculations
+            vlf_power = np.sum(psd[(freqs >= vlf_band[0]) & (freqs < vlf_band[1])])
+            lf_power = np.sum(psd[(freqs >= lf_band[0]) & (freqs < lf_band[1])])
+            hf_power = np.sum(psd[(freqs >= hf_band[0]) & (freqs < hf_band[1])])
+
+            # Relative power
+            vlf_ratio = vlf_power / total_power if total_power > 0 else 0
+            lf_ratio = lf_power / total_power if total_power > 0 else 0
+            hf_ratio = hf_power / total_power if total_power > 0 else 0
             
-            # Calculate power in different frequency bands
-            vlf_power = np.sum(psd[(freqs >= 0.003) & (freqs < 0.04)])
-            lf_power = np.sum(psd[(freqs >= 0.04) & (freqs < 0.15)])
-            hf_power = np.sum(psd[(freqs >= 0.15) & (freqs < 0.4)])
-            
-            # Calculate LF/HF ratio
+            # LF/HF ratio
             lf_hf_ratio = lf_power / hf_power if hf_power != 0 else 0
             
-            # Calculate additional features
-            mean_freq = np.sum(freqs * psd) / total_power
+            # Spectral entropy
+            psd_norm = psd / total_power if total_power != 0 else np.zeros_like(psd)
+            spectral_entropy = entropy(psd_norm)
+            
+            # Mean, median, peak frequency, and bandwidth
+            mean_freq = np.sum(freqs * psd) / total_power if total_power != 0 else 0
             median_freq = freqs[np.argsort(psd)[len(psd) // 2]]
             peak_freq = freqs[np.argmax(psd)]
-            bandwidth = np.sqrt(np.sum(((freqs - mean_freq) ** 2) * psd) / total_power)
+            bandwidth = np.sqrt(np.sum(((freqs - mean_freq) ** 2) * psd) / total_power) if total_power != 0 else 0
             
             # Time-domain features
             mean_val = np.mean(segment)
@@ -210,15 +234,49 @@ class ECGClusterer:
             skewness = pd.Series(segment).skew()
             kurtosis = pd.Series(segment).kurtosis()
             
-            # Append the calculated features
+            # Append all calculated features
             features.append([
-            total_power, vlf_power, lf_power, hf_power, lf_hf_ratio, 
-            mean_freq, median_freq, peak_freq, bandwidth,
-            mean_val, std_val, max_val, min_val, range_val, 
-            rms_val, skewness, kurtosis
+                total_power, vlf_power, lf_power, hf_power, 
+                vlf_ratio, lf_ratio, lf_hf_ratio, 
+                spectral_entropy, mean_freq, 
+                peak_freq, bandwidth, std_val, 
+                max_val, min_val, range_val, rms_val, 
+                skewness, kurtosis
             ])
+        
+        # def rank_features_with_pca(features, feature_names):
+        #     # Step 1: Standardize the features
+        #     scaler = StandardScaler()
+        #     standardized_features = scaler.fit_transform(features)
+            
+        #     # Step 2: Perform PCA
+        #     pca = PCA()
+        #     pca.fit(standardized_features)
+            
+        #     # Step 3: Get feature contributions to each principal component
+        #     component_contributions = np.abs(pca.components_)
+            
+        #     # Step 4: Aggregate contributions across all components weighted by explained variance
+        #     explained_variance = pca.explained_variance_ratio_
+        #     feature_importance = np.dot(component_contributions.T, explained_variance)
+            
+        #     # Step 5: Rank features
+        #     feature_ranking = sorted(
+        #         zip(feature_names, feature_importance),
+        #         key=lambda x: x[1],
+        #         reverse=True
+        #     )
+            
+        #     return feature_ranking
 
+        # ranking = rank_features_with_pca(features, feature_names=["Total Power", "VLF Power", "LF Power", "HF Power", "VLF Ratio", "LF Ratio", "HF Ratio", "LF/HF Ratio", "Spectral Entropy", "Mean Frequency", "Median Frequency", "Peak Frequency", "Bandwidth", "Mean Value", "Standard Deviation", "Maximum Value", "Minimum Value", "Range", "RMS Value", "Skewness", "Kurtosis"])
+
+        # # Print ranked features
+        # for i, (feature, importance) in enumerate(ranking):
+        #     print(f"{i+1}. {feature}: {importance:.4f}")
+        
         return np.array(features)
+
     
     def kmeans_clustering(self, features, n_clusters):
 
@@ -236,6 +294,7 @@ class ECGClusterer:
         return kmeans.labels_
 
     def plot_clusters(self, data, labels):
+        viewer = ECGClusterViewer(tk.Tk(), self.data_path, self.hz, self.seconds, len(np.unique(labels)))
 
         # Plot the entire signal
         plt.figure(figsize=(12, 6))
@@ -243,19 +302,6 @@ class ECGClusterer:
         downsampled_data = signal.decimate(data, downsample_factor)
         plt.plot(downsampled_data, color='blue', label='Downsampled ECG Signal')
 
-        # Merge labels
-        # window_size = 10  # Extracted window variable for control
-
-        # # Merge labels without carry-over effect
-        # merged_labels = []
-        # for i in range(0, len(labels), window_size):
-        #     segment_labels = labels[i:i + window_size]
-        #     majority_label = np.bincount(segment_labels).argmax()
-        #     merged_labels.extend([majority_label] * len(segment_labels))
-
-        # labels = np.array(merged_labels)
-
-        # Plot after merging
         unique_labels = np.unique(labels)
         cluster_plot = np.zeros(len(data) // downsample_factor)
         for label in unique_labels:
@@ -275,6 +321,7 @@ class ECGClusterer:
         plt.title('ECG Signal with Cluster Groups')
         plt.legend()
         plt.show()
+        
         while True:
             # Display random segment of all groups side by side
             fig, axs = plt.subplots(len(unique_labels), 1, figsize=(12, 6 * len(unique_labels)))
@@ -301,6 +348,67 @@ class ECGClusterer:
             
             plt.tight_layout()
             plt.show()
+
+class ECGClusterViewer:
+    def __init__(self, root, data_path, hz, seconds, n_clusters):
+        self.root = root
+        self.data_path = data_path
+        self.hz = hz
+        self.seconds = seconds
+        self.n_clusters = n_clusters
+
+        self.root.title("ECG Cluster Viewer")
+
+        self.fig, self.ax = plt.subplots(figsize=(10, 6))
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+        self.clusterer = ECGClusterer(data_path, hz, seconds)
+        self.data = self.clusterer.load_data()
+        self.features = self.clusterer.preprocess_data(self.data)
+        self.labels = self.clusterer.kmeans_clustering(self.features, n_clusters)
+
+        self.plot_clusters()
+
+        self.canvas.mpl_connect('button_press_event', self.on_click)
+
+        self.detail_fig, self.detail_ax = plt.subplots(figsize=(10, 6))
+        self.detail_canvas = FigureCanvasTkAgg(self.detail_fig, master=self.root)
+        self.detail_canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
+        self.detail_ax.text(0.5, 0.5, "Click on a node to view", ha='center', va='center', fontsize=12)
+        self.detail_canvas.draw()
+
+    def plot_clusters(self):
+        pca = PCA(n_components=2)
+        reduced_features = pca.fit_transform(self.features)
+        scatter = self.ax.scatter(reduced_features[:, 0], reduced_features[:, 1], c=self.labels, cmap='viridis')
+        self.fig.colorbar(scatter, ax=self.ax)
+        self.ax.set_title('ECG Clusters')
+        self.ax.set_xlabel('Principal Component 1')
+        self.ax.set_ylabel('Principal Component 2')
+        self.canvas.draw()
+
+    def on_click(self, event):
+        if event.inaxes == self.ax:
+            x, y = event.xdata, event.ydata
+            pca = PCA(n_components=2)
+            reduced_features = pca.fit_transform(self.features)
+            distances = np.sqrt((reduced_features[:, 0] - x) ** 2 + (reduced_features[:, 1] - y) ** 2)
+            closest_index = np.argmin(distances)
+            self.plot_detail(closest_index)
+
+    def plot_detail(self, index):
+        segment_start = index * self.hz * self.seconds
+        segment_end = segment_start + self.hz * self.seconds
+        segment = self.data[segment_start:segment_end]
+        time_axis = np.linspace(0, self.seconds, len(segment))
+
+        self.detail_ax.clear()
+        self.detail_ax.plot(time_axis, segment, color='blue')
+        self.detail_ax.set_title(f'Segment {index}')
+        self.detail_ax.set_xlabel('Time (s)')
+        self.detail_ax.set_ylabel('Amplitude')
+        self.detail_canvas.draw()
 
 class ECGSegmentViewer:
     def __init__(self, root, segment_data, bpm_list, bpm_reg, bpm_tag, seconds, config_manager, file_entry):
@@ -623,10 +731,17 @@ class ECGApp:
         self.process_button.pack(pady=10)
 
         self.mode_var = tk.StringVar(value="peak_detection")
-        self.peak_detection_radio = tk.Radiobutton(root, text="Peak Detection", variable=self.mode_var, value="peak_detection")
+        self.peak_detection_radio = tk.Radiobutton(root, text="Peak Detection", variable=self.mode_var, value="peak_detection", command=self.toggle_dropdown)
         self.peak_detection_radio.pack(pady=5)
-        self.quality_classifier_radio = tk.Radiobutton(root, text="Quality Classifier", variable=self.mode_var, value="quality_classifier")
+        self.quality_classifier_radio = tk.Radiobutton(root, text="Quality Classifier", variable=self.mode_var, value="quality_classifier", command=self.toggle_dropdown)
         self.quality_classifier_radio.pack(pady=5)
+
+        self.cluster_frame = tk.Frame(root)
+        self.cluster_label = tk.Label(self.cluster_frame, text="Select Number of Clusters:")
+        self.cluster_label.pack(side=tk.LEFT, padx=5)
+        self.cluster_var = tk.IntVar(value=2)
+        self.cluster_dropdown = tk.OptionMenu(self.cluster_frame, self.cluster_var, 2, 3, 4, 5)
+        self.cluster_dropdown.pack(side=tk.LEFT, padx=5)
 
         self.progress = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(root, variable=self.progress, maximum=100)
@@ -634,6 +749,11 @@ class ECGApp:
 
         self.progress_label = tk.Label(root, text="")
         self.progress_label.pack(pady=0)
+    def toggle_dropdown(self):
+        if self.mode_var.get() == "quality_classifier":
+            self.cluster_frame.pack(pady=5)
+        else:
+            self.cluster_frame.pack_forget()
     
     def validate_and_process(self, _ = None):
         try:
@@ -706,9 +826,9 @@ class ECGApp:
             self.ecg_processor.bpm_reg = self.ecg_processor.polymer_regression(np.arange(len(bpm_list)), bpm_list)
             self.progress.set(100)
             self.progress_label.config(text="Processing complete")
-            self.root.after(0, show_viewer)
+            self.root.after(0, show_peak_viewer)
 
-        def show_viewer():
+        def show_peak_viewer():
             segment_data = self.ecg_processor.segment_data
             bpm_list = self.ecg_processor.bpm_list
             bpm_reg = self.ecg_processor.bpm_reg
@@ -719,19 +839,22 @@ class ECGApp:
             ecg_viewer = ECGSegmentViewer(viewer_root, segment_data, bpm_list, bpm_reg, bpm_tag, seconds, self.config_manager, self.file_entry.get())
             ecg_viewer.current_segment_index = self.config_manager.get("last_index", 0)
             ecg_viewer.plot_segment(ecg_viewer.current_segment_index)
+        
+        def show_cluster_viewer():
+            ...
 
         def run_clusterer():
             self.ecg_processor = ECGClusterer(data_path, hz, seconds)
             ecg_signal = self.ecg_processor.load_data()
             features = self.ecg_processor.preprocess_data(ecg_signal)
-            n_clusters = 3
+            n_clusters = self.cluster_var.get()
 
             labels = self.ecg_processor.kmeans_clustering(features, n_clusters)
             self.ecg_processor.plot_clusters(ecg_signal, labels)
 
             self.progress.set(100)
             self.progress_label.config(text="Processing complete")
-            # self.root.after(0, show_viewer)
+            self.root.after(0, show_cluster_viewer)
 
         # Disable buttons, entry lines, and radios during processing
         self.file_entry.config(state=tk.DISABLED)
