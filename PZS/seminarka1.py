@@ -12,8 +12,13 @@ from tkinter import ttk
 import os
 import json
 import threading
+import pandas as pd
+from sklearn.cluster import KMeans
+import random
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
-class ECGProcessor:
+class ECGPeakDetector:
     def __init__(self, data_path, hz, seconds):
         self.data_path = data_path
         self.hz = hz
@@ -154,6 +159,148 @@ class ECGProcessor:
         print(f"Best degree: {best_degree} with R2: {best_r2}")
         return best_y_pred
 
+class ECGClusterer:
+    def __init__(self, data_path, hz, seconds):
+        self.data_path = data_path
+        self.hz = hz
+        self.seconds = seconds
+    
+    def load_data(self):
+        data = np.fromfile(self.data_path, dtype=np.int16)
+        return data
+    
+    def preprocess_data(self, data):
+        # Normalize the data
+        data = (data - np.mean(data)) / np.std(data)
+
+        # Segment the data into windows
+        window_size = self.hz * self.seconds
+        segments = [data[i:i + window_size] for i in range(0, len(data), window_size)]
+
+        # Extract features from each segment
+        features = []
+        for segment in segments:
+            # Perform frequency analysis using Welch's method
+            freqs, psd = signal.welch(segment, fs=self.hz)
+            
+            # Calculate total power
+            total_power = np.sum(psd)
+            
+            # Calculate power in different frequency bands
+            vlf_power = np.sum(psd[(freqs >= 0.003) & (freqs < 0.04)])
+            lf_power = np.sum(psd[(freqs >= 0.04) & (freqs < 0.15)])
+            hf_power = np.sum(psd[(freqs >= 0.15) & (freqs < 0.4)])
+            
+            # Calculate LF/HF ratio
+            lf_hf_ratio = lf_power / hf_power if hf_power != 0 else 0
+            
+            # Calculate additional features
+            mean_freq = np.sum(freqs * psd) / total_power
+            median_freq = freqs[np.argsort(psd)[len(psd) // 2]]
+            peak_freq = freqs[np.argmax(psd)]
+            bandwidth = np.sqrt(np.sum(((freqs - mean_freq) ** 2) * psd) / total_power)
+            
+            # Time-domain features
+            mean_val = np.mean(segment)
+            std_val = np.std(segment)
+            max_val = np.max(segment)
+            min_val = np.min(segment)
+            range_val = max_val - min_val
+            rms_val = np.sqrt(np.mean(segment**2))
+            skewness = pd.Series(segment).skew()
+            kurtosis = pd.Series(segment).kurtosis()
+            
+            # Append the calculated features
+            features.append([
+            total_power, vlf_power, lf_power, hf_power, lf_hf_ratio, 
+            mean_freq, median_freq, peak_freq, bandwidth,
+            mean_val, std_val, max_val, min_val, range_val, 
+            rms_val, skewness, kurtosis
+            ])
+
+        return np.array(features)
+    
+    def kmeans_clustering(self, features, n_clusters):
+
+        # Standardize the features
+        scaler = StandardScaler()
+        scaled_features = scaler.fit_transform(features)
+
+        # Reduce dimensionality with PCA
+        pca = PCA(n_components=0.95)  # Retain 95% of variance
+        reduced_features = pca.fit_transform(scaled_features)
+
+        # Apply KMeans clustering
+        kmeans = KMeans(n_clusters=n_clusters)
+        kmeans.fit(reduced_features)
+        return kmeans.labels_
+
+    def plot_clusters(self, data, labels):
+
+        # Plot the entire signal
+        plt.figure(figsize=(12, 6))
+        downsample_factor = 10
+        downsampled_data = signal.decimate(data, downsample_factor)
+        plt.plot(downsampled_data, color='blue', label='Downsampled ECG Signal')
+
+        # Merge labels
+        # window_size = 10  # Extracted window variable for control
+
+        # # Merge labels without carry-over effect
+        # merged_labels = []
+        # for i in range(0, len(labels), window_size):
+        #     segment_labels = labels[i:i + window_size]
+        #     majority_label = np.bincount(segment_labels).argmax()
+        #     merged_labels.extend([majority_label] * len(segment_labels))
+
+        # labels = np.array(merged_labels)
+
+        # Plot after merging
+        unique_labels = np.unique(labels)
+        cluster_plot = np.zeros(len(data) // downsample_factor)
+        for label in unique_labels:
+            cluster_indices = np.where(labels == label)[0]
+            for idx in cluster_indices:
+                start = (idx * self.hz * self.seconds) // downsample_factor
+                end = (idx * self.hz * self.seconds + self.hz * self.seconds) // downsample_factor
+                cluster_plot[start:end] = label + 1  # Shift label by 1 to make it visible
+
+        # Scale the cluster plot to be visible over the ECG plot
+        cluster_plot = cluster_plot * (np.max(downsampled_data) - np.min(downsampled_data)) / (len(unique_labels) + 1) + np.min(downsampled_data)
+
+        plt.plot(cluster_plot, color='green', label='Cluster Levels (After Merging)')
+
+        plt.xlabel('Sample Index')
+        plt.ylabel('Amplitude')
+        plt.title('ECG Signal with Cluster Groups')
+        plt.legend()
+        plt.show()
+        while True:
+            # Display random segment of all groups side by side
+            fig, axs = plt.subplots(len(unique_labels), 1, figsize=(12, 6 * len(unique_labels)))
+            
+            # Determine the group with the biggest length
+            group_lengths = [len(np.where(labels == label)[0]) for label in unique_labels]
+            max_length_index = np.argmax(group_lengths)
+            
+            for i, label in enumerate(unique_labels):
+                cluster_indices = np.where(labels == label)[0]
+                random_segment_idx = random.choice(cluster_indices)
+                start = random_segment_idx * self.hz * self.seconds
+                end = start + self.hz * self.seconds
+                segment = data[start:end]
+                time_axis = np.linspace(start / self.hz, end / self.hz, len(segment))
+                axs[i].plot(time_axis, segment, label=f'Cluster {label}')
+                if i == max_length_index:
+                    axs[i].set_title('Good')
+                else:
+                    axs[i].set_title(f'Anomalous {i}')
+                    axs[i].set_xlabel('Time (s)')
+                    axs[i].set_ylabel('Amplitude')
+                    axs[i].legend()
+            
+            plt.tight_layout()
+            plt.show()
 
 class ECGSegmentViewer:
     def __init__(self, root, segment_data, bpm_list, bpm_reg, bpm_tag, seconds, config_manager, file_entry):
@@ -518,8 +665,8 @@ class ECGApp:
         self.config_manager.set("last_path", data_path)
         self.config_manager.set("last_hz", hz)
 
-        def run_processor():
-            self.ecg_processor = ECGProcessor(data_path, hz, seconds)
+        def run_detector():
+            self.ecg_processor = ECGPeakDetector(data_path, hz, seconds)
             ecg_signal = self.ecg_processor.load_data()
             segments = np.array_split(ecg_signal, len(ecg_signal) // (self.ecg_processor.hz * self.ecg_processor.seconds))
 
@@ -573,13 +720,18 @@ class ECGApp:
             ecg_viewer.current_segment_index = self.config_manager.get("last_index", 0)
             ecg_viewer.plot_segment(ecg_viewer.current_segment_index)
 
-            # Enable buttons and entry lines after processing is done
-            self.file_entry.config(state=tk.NORMAL)
-            self.browse_button.config(state=tk.NORMAL)
-            self.hz_entry.config(state=tk.NORMAL)
-            self.process_button.config(state=tk.NORMAL)
-            self.peak_detection_radio.config(state=tk.NORMAL)
-            self.quality_classifier_radio.config(state=tk.NORMAL)
+        def run_clusterer():
+            self.ecg_processor = ECGClusterer(data_path, hz, seconds)
+            ecg_signal = self.ecg_processor.load_data()
+            features = self.ecg_processor.preprocess_data(ecg_signal)
+            n_clusters = 3
+
+            labels = self.ecg_processor.kmeans_clustering(features, n_clusters)
+            self.ecg_processor.plot_clusters(ecg_signal, labels)
+
+            self.progress.set(100)
+            self.progress_label.config(text="Processing complete")
+            # self.root.after(0, show_viewer)
 
         # Disable buttons, entry lines, and radios during processing
         self.file_entry.config(state=tk.DISABLED)
@@ -590,9 +742,17 @@ class ECGApp:
         self.quality_classifier_radio.config(state=tk.DISABLED)
 
         if self.mode_var.get() == "peak_detection":
-            threading.Thread(target=run_processor).start()
+            threading.Thread(target=run_detector).start()
         elif self.mode_var.get() == "quality_classifier":
-            ...
+            run_clusterer()
+
+                    # Enable buttons and entry lines after processing is done
+        self.file_entry.config(state=tk.NORMAL)
+        self.browse_button.config(state=tk.NORMAL)
+        self.hz_entry.config(state=tk.NORMAL)
+        self.process_button.config(state=tk.NORMAL)
+        self.peak_detection_radio.config(state=tk.NORMAL)
+        self.quality_classifier_radio.config(state=tk.NORMAL)
 
     def on_closing(self):
         if hasattr(self, 'ecg_viewer'):
