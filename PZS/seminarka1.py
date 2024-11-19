@@ -355,9 +355,9 @@ class ECGClusterViewer:
 
         self.root.title("ECG Cluster Viewer")
 
-        self.fig, self.ax = plt.subplots(figsize=(10, 6))
+        self.fig, self.axs = plt.subplots(1, 2, figsize=(16, 6))
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
-        self.canvas.get_tk_widget().pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         self.data = data
         self.features = features
@@ -375,14 +375,8 @@ class ECGClusterViewer:
         self.canvas.mpl_connect('button_press_event', self.on_click)
         self.canvas.mpl_connect('motion_notify_event', self.on_hover)
 
-        self.detail_fig, self.detail_ax = plt.subplots(figsize=(10, 6))
-        self.detail_canvas = FigureCanvasTkAgg(self.detail_fig, master=self.root)
-        self.detail_canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        self.detail_ax.text(0.5, 0.5, "Click on a node to view", ha='center', va='center', fontsize=12)
-        self.detail_canvas.draw()
-
         self.button_frame = tk.Frame(self.root, bg=self.palette.current_palette['bg'])
-        self.button_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        self.button_frame.pack(side=tk.BOTTOM, fill=tk.X, expand=False)
 
         self.night_mode_button = tk.Button(self.button_frame, text="Toggle Night Mode", command=self.toggle_night_mode, bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
         self.night_mode_button.pack(side=tk.RIGHT, padx=10, pady=5)
@@ -395,11 +389,11 @@ class ECGClusterViewer:
     def plot_clusters(self):
         pca = PCA(n_components=2)
         reduced_features = pca.fit_transform(self.features)
-        self.scatter = self.ax.scatter(reduced_features[:, 0], reduced_features[:, 1], c=self.labels, cmap='viridis')
-        self.fig.colorbar(self.scatter, ax=self.ax)
-        self.ax.set_title('ECG Clusters')
-        self.ax.set_xlabel('Principal Component 1')
-        self.ax.set_ylabel('Principal Component 2')
+        self.scatter = self.axs[1].scatter(reduced_features[:, 0], reduced_features[:, 1], c=self.labels, cmap='viridis')
+        self.fig.colorbar(self.scatter, ax=self.axs[1])
+        self.axs[1].set_title('ECG Clusters')
+        self.axs[1].set_xlabel('Principal Component 1')
+        self.axs[1].set_ylabel('Principal Component 2')
         # Determine the group that is one of the largest and closest to the middle
         cluster_centers = np.array([reduced_features[self.labels == label].mean(axis=0) for label in np.unique(self.labels)])
         cluster_sizes = np.array([np.sum(self.labels == label) for label in np.unique(self.labels)])
@@ -419,16 +413,27 @@ class ECGClusterViewer:
         good_cluster_points = reduced_features[self.labels == good_cluster_label]
         hull = ConvexHull(good_cluster_points)
         centroid = np.mean(good_cluster_points, axis=0)
-        for i, simplex in enumerate(hull.simplices):
-            points = good_cluster_points[simplex]
-            moved_points = points + (centroid - points) / 5
-            self.ax.plot(moved_points[:, 0], moved_points[:, 1], 'r--', lw=2, label='Predicted Good Signal' if i == 0 else "")
+        # Calculate distances from the centroid
+        distances_from_centroid = np.linalg.norm(good_cluster_points - centroid, axis=1)
+        max_distance = np.percentile(distances_from_centroid, 99)  # Use 99th percentile as threshold
 
-        self.ax.legend()
+        # Filter points within the max distance
+        filtered_points = good_cluster_points[distances_from_centroid < max_distance]
+
+        # Move the boundaries 1/4th towards the centroid
+        moved_points = centroid + 0.85 * (filtered_points - centroid)
+
+        # Recalculate the convex hull for the moved points
+        if len(moved_points) >= 3:
+            moved_hull = ConvexHull(moved_points)
+            for i, simplex in enumerate(moved_hull.simplices):
+                self.axs[1].plot(moved_points[simplex, 0], moved_points[simplex, 1], 'r--', lw=2, label='Predicted Good Signal' if not i else None)
+
+        self.axs[1].legend()
         self.canvas.draw()
 
     def on_click(self, event):
-        if event.inaxes == self.ax:
+        if event.inaxes == self.axs[1]:
             x, y = event.xdata, event.ydata
             pca = PCA(n_components=2)
             reduced_features = pca.fit_transform(self.features)
@@ -437,7 +442,7 @@ class ECGClusterViewer:
             self.plot_detail(closest_index)
 
     def on_hover(self, event):
-        if event.inaxes == self.ax:
+        if event.inaxes == self.axs[1]:
             x, y = event.xdata, event.ydata
             pca = PCA(n_components=2)
             reduced_features = pca.fit_transform(self.features)
@@ -447,7 +452,7 @@ class ECGClusterViewer:
             if self.highlighted_point is not None:
                 self.highlighted_point.set_offsets([reduced_features[closest_index, 0], reduced_features[closest_index, 1]])
             else:
-                self.highlighted_point = self.ax.scatter(reduced_features[closest_index, 0], reduced_features[closest_index, 1], s=100, edgecolor='red', facecolor='none')
+                self.highlighted_point = self.axs[1].scatter(reduced_features[closest_index, 0], reduced_features[closest_index, 1], s=100, edgecolor='red', facecolor='none')
             
             self.canvas.draw_idle()
         else:
@@ -465,12 +470,12 @@ class ECGClusterViewer:
 
         group_color = self.scatter.cmap(self.labels[index] / max(self.labels))
 
-        self.detail_ax.clear()
-        self.detail_ax.plot(time_axis, segment, color=group_color)
-        self.detail_ax.set_title(f'Segment {index}')
-        self.detail_ax.set_xlabel('Time (s)')
-        self.detail_ax.set_ylabel('Amplitude')
-        self.detail_canvas.draw()
+        self.axs[0].clear()
+        self.axs[0].plot(time_axis, segment, color=group_color)
+        self.axs[0].set_title(f'Segment {index}')
+        self.axs[0].set_xlabel('Time (s)')
+        self.axs[0].set_ylabel('Amplitude')
+        self.canvas.draw()
 
     def toggle_night_mode(self):
         self.palette.toggle_night_mode()
@@ -816,7 +821,7 @@ class ECGApp:
         self.cluster_frame = tk.Frame(root)
         self.cluster_label = tk.Label(self.cluster_frame, text="Select Number of Clusters:")
         self.cluster_label.pack(side=tk.LEFT, padx=5)
-        self.cluster_var = tk.IntVar(value=2)
+        self.cluster_var = tk.IntVar(value=3)
         self.cluster_dropdown = tk.OptionMenu(self.cluster_frame, self.cluster_var, 2, 3, 4, 5, 6, 7, 8, 9, 10)
         self.cluster_dropdown.pack(side=tk.LEFT, padx=5)
 
@@ -894,9 +899,6 @@ class ECGApp:
                         filtered_bpm_tag.append(self.ecg_processor.bpm_tag[i])
                     segment_start = None
 
-            print(self.ecg_processor.bpm_tag)
-            print("\n")
-            print(filtered_bpm_tag)
             self.ecg_processor.bpm_tag = filtered_bpm_tag
 
             bpm_list = self.ecg_processor.bpm_list[:self.ecg_processor.bpm_tag[0]] if self.ecg_processor.bpm_tag else self.ecg_processor.bpm_list
@@ -932,12 +934,18 @@ class ECGApp:
         def run_clusterer():
             self.ecg_processor = ECGClusterer(data_path, hz, seconds)
             ecg_signal = self.ecg_processor.load_data()
+            self.progress_label.config(text="Preprocessing data...")
+            self.progress.set(10)
+            self.root.update_idletasks()
+
             features = self.ecg_processor.preprocess_data(ecg_signal)
             n_clusters = self.cluster_var.get()
 
-            labels = self.ecg_processor.kmeans_clustering(features, n_clusters)
+            self.progress_label.config(text="Clustering data...")
+            self.progress.set(50)
+            self.root.update_idletasks()
 
-            #self.ecg_processor.plot_clusters(ecg_signal, labels)
+            labels = self.ecg_processor.kmeans_clustering(features, n_clusters)
 
             self.progress.set(100)
             self.progress_label.config(text="Processing complete")
