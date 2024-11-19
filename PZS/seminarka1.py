@@ -21,6 +21,7 @@ from scipy.stats import entropy
 import numpy as np
 import pandas as pd
 from scipy import signal
+from scipy.spatial import ConvexHull
 
 
 class ECGPeakDetector:
@@ -294,7 +295,6 @@ class ECGClusterer:
         return kmeans.labels_
 
     def plot_clusters(self, data, labels):
-        viewer = ECGClusterViewer(tk.Tk(), self.data_path, self.hz, self.seconds, len(np.unique(labels)))
 
         # Plot the entire signal
         plt.figure(figsize=(12, 6))
@@ -350,42 +350,81 @@ class ECGClusterer:
             plt.show()
 
 class ECGClusterViewer:
-    def __init__(self, root, data_path, hz, seconds, n_clusters):
+    def __init__(self, root, data, features, labels, hz, seconds):
         self.root = root
-        self.data_path = data_path
-        self.hz = hz
-        self.seconds = seconds
-        self.n_clusters = n_clusters
 
         self.root.title("ECG Cluster Viewer")
 
         self.fig, self.ax = plt.subplots(figsize=(10, 6))
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.canvas.get_tk_widget().pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
-        self.clusterer = ECGClusterer(data_path, hz, seconds)
-        self.data = self.clusterer.load_data()
-        self.features = self.clusterer.preprocess_data(self.data)
-        self.labels = self.clusterer.kmeans_clustering(self.features, n_clusters)
+        self.data = data
+        self.features = features
+        self.labels = labels
+        self.hz = hz
+        self.seconds = seconds
+
+        self.scatter = None
+        self.highlighted_point = None
+
+        self.palette = ColorPalette()
 
         self.plot_clusters()
 
         self.canvas.mpl_connect('button_press_event', self.on_click)
+        self.canvas.mpl_connect('motion_notify_event', self.on_hover)
 
         self.detail_fig, self.detail_ax = plt.subplots(figsize=(10, 6))
         self.detail_canvas = FigureCanvasTkAgg(self.detail_fig, master=self.root)
-        self.detail_canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
+        self.detail_canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         self.detail_ax.text(0.5, 0.5, "Click on a node to view", ha='center', va='center', fontsize=12)
         self.detail_canvas.draw()
+
+        self.button_frame = tk.Frame(self.root, bg=self.palette.current_palette['bg'])
+        self.button_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.night_mode_button = tk.Button(self.button_frame, text="Toggle Night Mode", command=self.toggle_night_mode, bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.night_mode_button.pack(side=tk.RIGHT, padx=10, pady=5)
+
+        self.root.configure(bg=self.palette.current_palette['bg'])
+        self.button_frame.configure(bg=self.palette.current_palette['bg'])
+
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def plot_clusters(self):
         pca = PCA(n_components=2)
         reduced_features = pca.fit_transform(self.features)
-        scatter = self.ax.scatter(reduced_features[:, 0], reduced_features[:, 1], c=self.labels, cmap='viridis')
-        self.fig.colorbar(scatter, ax=self.ax)
+        self.scatter = self.ax.scatter(reduced_features[:, 0], reduced_features[:, 1], c=self.labels, cmap='viridis')
+        self.fig.colorbar(self.scatter, ax=self.ax)
         self.ax.set_title('ECG Clusters')
         self.ax.set_xlabel('Principal Component 1')
         self.ax.set_ylabel('Principal Component 2')
+        # Determine the group that is one of the largest and closest to the middle
+        cluster_centers = np.array([reduced_features[self.labels == label].mean(axis=0) for label in np.unique(self.labels)])
+        cluster_sizes = np.array([np.sum(self.labels == label) for label in np.unique(self.labels)])
+        middle_point = np.mean(reduced_features, axis=0)
+        distances_to_middle = np.linalg.norm(cluster_centers - middle_point, axis=1)
+        
+        # Normalize sizes and distances
+        normalized_sizes = cluster_sizes / np.max(cluster_sizes)
+        normalized_distances = distances_to_middle / np.max(distances_to_middle)
+        
+        # Determine the "good" cluster
+        scores = normalized_sizes - normalized_distances
+        good_cluster_index = np.argmax(scores)
+        good_cluster_label = np.unique(self.labels)[good_cluster_index]
+
+        # Draw boundaries around the good cluster
+        good_cluster_points = reduced_features[self.labels == good_cluster_label]
+        hull = ConvexHull(good_cluster_points)
+        centroid = np.mean(good_cluster_points, axis=0)
+        for i, simplex in enumerate(hull.simplices):
+            points = good_cluster_points[simplex]
+            moved_points = points + (centroid - points) / 5
+            self.ax.plot(moved_points[:, 0], moved_points[:, 1], 'r--', lw=2, label='Predicted Good Signal' if i == 0 else "")
+
+        self.ax.legend()
         self.canvas.draw()
 
     def on_click(self, event):
@@ -397,72 +436,53 @@ class ECGClusterViewer:
             closest_index = np.argmin(distances)
             self.plot_detail(closest_index)
 
+    def on_hover(self, event):
+        if event.inaxes == self.ax:
+            x, y = event.xdata, event.ydata
+            pca = PCA(n_components=2)
+            reduced_features = pca.fit_transform(self.features)
+            distances = np.sqrt((reduced_features[:, 0] - x) ** 2 + (reduced_features[:, 1] - y) ** 2)
+            closest_index = np.argmin(distances)
+
+            if self.highlighted_point is not None:
+                self.highlighted_point.set_offsets([reduced_features[closest_index, 0], reduced_features[closest_index, 1]])
+            else:
+                self.highlighted_point = self.ax.scatter(reduced_features[closest_index, 0], reduced_features[closest_index, 1], s=100, edgecolor='red', facecolor='none')
+            
+            self.canvas.draw_idle()
+        else:
+            if self.highlighted_point is not None:
+                self.highlighted_point.remove()
+                self.highlighted_point = None
+                self.canvas.draw_idle()
+    
+
     def plot_detail(self, index):
         segment_start = index * self.hz * self.seconds
         segment_end = segment_start + self.hz * self.seconds
         segment = self.data[segment_start:segment_end]
         time_axis = np.linspace(0, self.seconds, len(segment))
 
+        group_color = self.scatter.cmap(self.labels[index] / max(self.labels))
+
         self.detail_ax.clear()
-        self.detail_ax.plot(time_axis, segment, color='blue')
+        self.detail_ax.plot(time_axis, segment, color=group_color)
         self.detail_ax.set_title(f'Segment {index}')
         self.detail_ax.set_xlabel('Time (s)')
         self.detail_ax.set_ylabel('Amplitude')
         self.detail_canvas.draw()
 
-class ECGSegmentViewer:
-    def __init__(self, root, segment_data, bpm_list, bpm_reg, bpm_tag, seconds, config_manager, file_entry):
-        self.root = root
-        self.segment_data = segment_data
-        self.bpm_list = bpm_list
-        self.bpm_reg = bpm_reg
-        self.bpm_tag = bpm_tag
-        self.seconds = seconds
-        self.config_manager = config_manager
-        self.file_entry = file_entry
-        self.current_segment_index = 0
-        self.is_night_mode = False
-        self.current_palette = self.day_palette
+    def toggle_night_mode(self):
+        self.palette.toggle_night_mode()
+        self.root.configure(bg=self.palette.current_palette['bg'])
+        self.night_mode_button.configure(bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'], text="Toggle Day Mode" if self.palette.is_night_mode else "Toggle Night Mode")
+        self.button_frame.configure(bg=self.palette.current_palette['bg'])
+        self.plot_clusters()
 
-        self.root.title(f"ECGViewer - {os.path.basename(self.file_entry)}")
+    def on_closing(self):
+        self.root.destroy()
 
-        self.fig, self.axs = plt.subplots(2, 2, figsize=(16, 6), gridspec_kw={'width_ratios': [2.5, 1.5]})
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        self.root.bind('<Key>', self.on_key)
-        self.fig.canvas.mpl_connect('button_press_event', self.on_bpm_click)
-        self.fig.canvas.mpl_connect('motion_notify_event', self.on_bpm_hover)
-
-        self.default = None
-        self.plot_segment(self.current_segment_index)
-        self.default = self.axs[0, 1].get_xlim()
-
-        self.span1 = SpanSelector(self.axs[0, 0], self.on_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=self.current_palette['span_color']))
-        self.span2 = SpanSelector(self.axs[1, 0], self.on_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=self.current_palette['span_color']))
-        self.span3 = SpanSelector(self.axs[0, 1], self.on_bpm_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=self.current_palette['span_color']))
-
-        self.button_frame = tk.Frame(self.root, bg=self.current_palette['bg'])
-        self.button_frame.pack(side=tk.BOTTOM, fill=tk.X)
-
-        self.reset_button = tk.Button(self.button_frame, text="Reset Zoom", command=self.reset_zoom, bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.reset_button.pack(side=tk.LEFT, padx=10, pady=5)
-
-        self.night_mode_button = tk.Button(self.button_frame, text="Toggle Night Mode", command=self.toggle_night_mode, bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.night_mode_button.pack(side=tk.RIGHT, padx=10, pady=5)
-
-        self.segment_entry = tk.Entry(self.button_frame, bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.segment_entry.pack(side=tk.LEFT, padx=10, pady=5)
-        self.segment_entry.bind('<Return>', lambda event: self.jump_to_segment())
-
-        self.jump_button = tk.Button(self.button_frame, text="Jump to Segment", command=self.jump_to_segment, bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.jump_button.pack(side=tk.LEFT, padx=10, pady=5)
-        self.hint_button = tk.Button(self.button_frame, text="?", command=self.show_hint, bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.hint_button.pack(side=tk.LEFT, padx=10, pady=5)
-        self.hint_button.bind("<Button-1>", lambda event: self.hint_button.lift())
-
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-
+class ColorPalette:
     day_palette = {
         'bg': 'white',
         'fg': 'black',
@@ -499,6 +519,66 @@ class ECGSegmentViewer:
         'highlight_alpha': 0.4
     }
 
+    def __init__(self):
+        self.is_night_mode = False
+        self.current_palette = self.day_palette
+
+    def toggle_night_mode(self):
+        self.is_night_mode = not self.is_night_mode
+        self.current_palette = self.night_palette if self.is_night_mode else self.day_palette
+
+class ECGSegmentViewer:
+    def __init__(self, root, segment_data, bpm_list, bpm_reg, bpm_tag, seconds, config_manager, file_entry):
+        self.root = root
+        self.segment_data = segment_data
+        self.bpm_list = bpm_list
+        self.bpm_reg = bpm_reg
+        self.bpm_tag = bpm_tag
+        self.seconds = seconds
+        self.config_manager = config_manager
+        self.file_entry = file_entry
+        self.current_segment_index = 0
+        self.palette = ColorPalette()
+
+        self.root.title(f"ECGViewer - {os.path.basename(self.file_entry)}")
+
+        self.fig, self.axs = plt.subplots(2, 2, figsize=(16, 6), gridspec_kw={'width_ratios': [2.5, 1.5]})
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+        self.root.bind('<Key>', self.on_key)
+        self.fig.canvas.mpl_connect('button_press_event', self.on_bpm_click)
+        self.fig.canvas.mpl_connect('motion_notify_event', self.on_bpm_hover)
+
+        self.default = None
+        self.plot_segment(self.current_segment_index)
+        self.default = self.axs[0, 1].get_xlim()
+
+        self.span1 = SpanSelector(self.axs[0, 0], self.on_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=self.palette.current_palette['span_color']))
+        self.span2 = SpanSelector(self.axs[1, 0], self.on_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=self.palette.current_palette['span_color']))
+        self.span3 = SpanSelector(self.axs[0, 1], self.on_bpm_select, 'horizontal', useblit=True, props=dict(alpha=0.5, facecolor=self.palette.current_palette['span_color']))
+
+        self.button_frame = tk.Frame(self.root, bg=self.palette.current_palette['bg'])
+        self.button_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.reset_button = tk.Button(self.button_frame, text="Reset Zoom", command=self.reset_zoom, bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.reset_button.pack(side=tk.LEFT, padx=10, pady=5)
+
+        self.night_mode_button = tk.Button(self.button_frame, text="Toggle Night Mode", command=self.toggle_night_mode, bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.night_mode_button.pack(side=tk.RIGHT, padx=10, pady=5)
+
+        self.segment_entry = tk.Entry(self.button_frame, bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.segment_entry.pack(side=tk.LEFT, padx=10, pady=5)
+        self.segment_entry.bind('<Return>', lambda event: self.jump_to_segment())
+
+        self.jump_button = tk.Button(self.button_frame, text="Jump to Segment", command=self.jump_to_segment, bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.jump_button.pack(side=tk.LEFT, padx=10, pady=5)
+        self.hint_button = tk.Button(self.button_frame, text="?", command=self.show_hint, bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.hint_button.pack(side=tk.LEFT, padx=10, pady=5)
+        self.hint_button.bind("<Button-1>", lambda event: self.hint_button.lift())
+
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
     def plot_segment(self, index, xlim=None, bpm_xlim=None):
         if index >= len(self.segment_data):
             index = 0
@@ -506,7 +586,7 @@ class ECGSegmentViewer:
         time_axis = np.linspace(index * self.seconds, (index + 1) * self.seconds, len(segment))
         self.axs[0, 0].cla()
         self.axs[1, 0].cla()
-        palette = self.current_palette
+        palette = self.palette.current_palette
         self.axs[0, 0].plot(time_axis, segment, color=palette['line_color'])
         self.axs[0, 0].plot(time_axis[r_peaks], segment[r_peaks], 'x', color=palette['peak_color'])
         self.axs[0, 0].set_title(f'Segment {index} (Raw)')
@@ -552,10 +632,8 @@ class ECGSegmentViewer:
             last_tag = self.bpm_tag[-1]
             if first_tag == last_tag:
                 self.axs[0, 1].axvline(x=first_tag, color=palette['peak_color'], alpha=0.2)
-                #self.axs[0, 1].text(first_tag, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
             else:
                 self.axs[0, 1].axvspan(first_tag-1, last_tag, color=palette['peak_color'], alpha=0.2)
-                #self.axs[0, 1].text((first_tag + last_tag) / 2, max(self.bpm_list), 'Invalid Signal', color=palette['title_color'], fontsize=9, fontweight='bold', bbox=dict(facecolor=palette['peak_color'], alpha=0.6, boxstyle='round,pad=0.3'), verticalalignment='center', horizontalalignment='center')
         self.axs[0, 1].axvspan(index - 0.5, index + 0.5, color=palette['highlight_color'], alpha=palette['highlight_alpha'])
         self.axs[0, 1].set_title('BPM over time')
         self.axs[0, 1].set_xlabel(f'Segments (length {self.seconds}s)')
@@ -576,7 +654,7 @@ class ECGSegmentViewer:
 
         self.axs[1, 1].cla()
         mean = np.mean(self.bpm_list[:self.bpm_tag[0]]) if self.bpm_tag else np.mean(self.bpm_list)
-        self.axs[1, 1].text(0.5, 0.5, f'Predicted segment BPM:\n{self.bpm_list[index]:.2f}\n\n\n\nPredicted signal BPM:\n{mean:.2f}', fontsize=14, ha='center', va='center', color=self.current_palette['fg'], transform=self.axs[1, 1].transAxes)
+        self.axs[1, 1].text(0.5, 0.5, f'Predicted segment BPM:\n{self.bpm_list[index]:.2f}\n\n\n\nPredicted signal BPM:\n{mean:.2f}', fontsize=14, ha='center', va='center', color=palette['fg'], transform=self.axs[1, 1].transAxes)
         self.axs[1, 1].set_axis_off()
         self.canvas.draw()
 
@@ -608,15 +686,14 @@ class ECGSegmentViewer:
         self.plot_segment(self.current_segment_index)
 
     def toggle_night_mode(self):
-        self.is_night_mode = not self.is_night_mode
-        self.current_palette = self.night_palette if self.is_night_mode else self.day_palette
-        self.root.configure(bg=self.current_palette['bg'])
-        self.reset_button.configure(bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.night_mode_button.configure(bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'], text="Toggle Day Mode" if self.is_night_mode else "Toggle Night Mode")
-        self.button_frame.configure(bg=self.current_palette['bg'])
-        self.segment_entry.configure(bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.jump_button.configure(bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
-        self.hint_button.configure(bg=self.current_palette['button_bg'], fg=self.current_palette['button_fg'])
+        self.palette.toggle_night_mode()
+        self.root.configure(bg=self.palette.current_palette['bg'])
+        self.reset_button.configure(bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.night_mode_button.configure(bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'], text="Toggle Day Mode" if self.palette.is_night_mode else "Toggle Night Mode")
+        self.button_frame.configure(bg=self.palette.current_palette['bg'])
+        self.segment_entry.configure(bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.jump_button.configure(bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
+        self.hint_button.configure(bg=self.palette.current_palette['button_bg'], fg=self.palette.current_palette['button_fg'])
         self.plot_segment(self.current_segment_index)
 
     def on_bpm_click(self, event):
@@ -639,8 +716,8 @@ class ECGSegmentViewer:
                     for text in self.axs[0, 1].texts:
                         if not text.get_text() == 'Invalid Signal':
                             text.remove()
-                    self.axs[0, 1].axvline(x=x, color=self.current_palette['hover_line_color'], linestyle='--')
-                    self.axs[0, 1].text(x, self.axs[0, 1].get_ylim()[1], f'{x}', color=self.current_palette['hover_text_color'], verticalalignment='top')
+                    self.axs[0, 1].axvline(x=x, color=self.palette.current_palette['hover_line_color'], linestyle='--')
+                    self.axs[0, 1].text(x, self.axs[0, 1].get_ylim()[1], f'{x}', color=self.palette.current_palette['hover_text_color'], verticalalignment='top')
                     self.canvas.draw_idle()
 
     def jump_to_segment(self):
@@ -740,7 +817,7 @@ class ECGApp:
         self.cluster_label = tk.Label(self.cluster_frame, text="Select Number of Clusters:")
         self.cluster_label.pack(side=tk.LEFT, padx=5)
         self.cluster_var = tk.IntVar(value=2)
-        self.cluster_dropdown = tk.OptionMenu(self.cluster_frame, self.cluster_var, 2, 3, 4, 5)
+        self.cluster_dropdown = tk.OptionMenu(self.cluster_frame, self.cluster_var, 2, 3, 4, 5, 6, 7, 8, 9, 10)
         self.cluster_dropdown.pack(side=tk.LEFT, padx=5)
 
         self.progress = tk.DoubleVar()
@@ -749,6 +826,7 @@ class ECGApp:
 
         self.progress_label = tk.Label(root, text="")
         self.progress_label.pack(pady=0)
+        
     def toggle_dropdown(self):
         if self.mode_var.get() == "quality_classifier":
             self.cluster_frame.pack(pady=5)
@@ -828,6 +906,14 @@ class ECGApp:
             self.progress_label.config(text="Processing complete")
             self.root.after(0, show_peak_viewer)
 
+            self.file_entry.config(state=tk.NORMAL)
+            self.browse_button.config(state=tk.NORMAL)
+            self.hz_entry.config(state=tk.NORMAL)
+            self.process_button.config(state=tk.NORMAL)
+            self.peak_detection_radio.config(state=tk.NORMAL)
+            self.quality_classifier_radio.config(state=tk.NORMAL)
+            self.cluster_dropdown.config(state=tk.NORMAL)
+
         def show_peak_viewer():
             segment_data = self.ecg_processor.segment_data
             bpm_list = self.ecg_processor.bpm_list
@@ -840,8 +926,8 @@ class ECGApp:
             ecg_viewer.current_segment_index = self.config_manager.get("last_index", 0)
             ecg_viewer.plot_segment(ecg_viewer.current_segment_index)
         
-        def show_cluster_viewer():
-            ...
+        def show_cluster_viewer(ecg_signal, features, labels, hz, seconds):
+            viewer = ECGClusterViewer(tk.Toplevel(self.root), ecg_signal, features, labels, hz, seconds)
 
         def run_clusterer():
             self.ecg_processor = ECGClusterer(data_path, hz, seconds)
@@ -850,11 +936,20 @@ class ECGApp:
             n_clusters = self.cluster_var.get()
 
             labels = self.ecg_processor.kmeans_clustering(features, n_clusters)
-            self.ecg_processor.plot_clusters(ecg_signal, labels)
+
+            #self.ecg_processor.plot_clusters(ecg_signal, labels)
 
             self.progress.set(100)
             self.progress_label.config(text="Processing complete")
-            self.root.after(0, show_cluster_viewer)
+            self.root.after(0, show_cluster_viewer, ecg_signal, features, labels, hz, seconds)
+
+            self.file_entry.config(state=tk.NORMAL)
+            self.browse_button.config(state=tk.NORMAL)
+            self.hz_entry.config(state=tk.NORMAL)
+            self.process_button.config(state=tk.NORMAL)
+            self.peak_detection_radio.config(state=tk.NORMAL)
+            self.quality_classifier_radio.config(state=tk.NORMAL)
+            self.cluster_dropdown.config(state=tk.NORMAL)
 
         # Disable buttons, entry lines, and radios during processing
         self.file_entry.config(state=tk.DISABLED)
@@ -863,19 +958,14 @@ class ECGApp:
         self.process_button.config(state=tk.DISABLED)
         self.peak_detection_radio.config(state=tk.DISABLED)
         self.quality_classifier_radio.config(state=tk.DISABLED)
+        self.cluster_dropdown.config(state=tk.DISABLED)
 
         if self.mode_var.get() == "peak_detection":
             threading.Thread(target=run_detector).start()
         elif self.mode_var.get() == "quality_classifier":
-            run_clusterer()
+            threading.Thread(target=run_clusterer).start()
 
                     # Enable buttons and entry lines after processing is done
-        self.file_entry.config(state=tk.NORMAL)
-        self.browse_button.config(state=tk.NORMAL)
-        self.hz_entry.config(state=tk.NORMAL)
-        self.process_button.config(state=tk.NORMAL)
-        self.peak_detection_radio.config(state=tk.NORMAL)
-        self.quality_classifier_radio.config(state=tk.NORMAL)
 
     def on_closing(self):
         if hasattr(self, 'ecg_viewer'):
