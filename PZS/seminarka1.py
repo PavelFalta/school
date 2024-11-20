@@ -129,7 +129,7 @@ class ECGPeakDetector:
             while len(res) > self.last_peak_num + 2:
                 min_peak_index = np.argmin(filtered_processed_signal[res])
                 res.pop(min_peak_index)
-            while len(res) < self.last_peak_num - 2:
+            while len(res) < self.last_peak_num - 2 and len(peaks) > 0:
                 max_peak_index = np.argmax(filtered_processed_signal[peaks])
                 res.append(peaks[max_peak_index])
                 peaks = np.delete(peaks, max_peak_index)
