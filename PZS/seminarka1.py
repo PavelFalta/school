@@ -144,7 +144,7 @@ class ECGPeakDetector:
         no_improvement_count = 0
         degree = 1
 
-        while no_improvement_count < 10:
+        while no_improvement_count < 20:
             poly = PolynomialFeatures(degree=degree)
             X_poly = poly.fit_transform(x.reshape(-1, 1))
             model = LinearRegression()
@@ -658,8 +658,20 @@ class ECGSegmentViewer:
         self.axs[0, 1].title.set_color(palette['title_color'])
 
         self.axs[1, 1].cla()
-        mean = np.mean(self.bpm_list[:self.bpm_tag[0]]) if self.bpm_tag else np.mean(self.bpm_list)
-        self.axs[1, 1].text(0.5, 0.5, f'Predicted segment BPM:\n{self.bpm_list[index]:.2f}\n\n\n\nPredicted signal BPM:\n{mean:.2f}', fontsize=14, ha='center', va='center', color=palette['fg'], transform=self.axs[1, 1].transAxes)
+        if self.bpm_tag:
+            valid_bpm_list = []
+            start = 0
+            for i,tag in enumerate(self.bpm_tag):
+                if i % 2 == 0:
+                    valid_bpm_list.extend(self.bpm_list[start:tag])
+                start = tag + 1
+            valid_bpm_list.extend(self.bpm_list[start:])
+            mean = np.mean(valid_bpm_list)
+        else:
+            mean = np.mean(self.bpm_list)
+        
+        print(len(valid_bpm_list))
+        self.axs[1, 1].text(0.5, 0.5, f'Predicted segment BPM:\n{self.bpm_list[index]:.2f}\n\n\n\nPredicted valid signal BPM:\n{mean:.2f}', fontsize=14, ha='center', va='center', color=palette['fg'], transform=self.axs[1, 1].transAxes)
         self.axs[1, 1].set_axis_off()
         self.canvas.draw()
 
@@ -900,10 +912,36 @@ class ECGApp:
                     segment_start = None
 
             self.ecg_processor.bpm_tag = filtered_bpm_tag
+            print(self.ecg_processor.bpm_tag)
 
-            bpm_list = self.ecg_processor.bpm_list[:self.ecg_processor.bpm_tag[0]] if self.ecg_processor.bpm_tag else self.ecg_processor.bpm_list
+            if self.ecg_processor.bpm_tag:
+                bpm_list = []
+                start = 0
+                for tag in self.ecg_processor.bpm_tag:
+                    bpm_list.extend(self.ecg_processor.bpm_list[start:tag])
+                    start = tag
+                bpm_list.extend(self.ecg_processor.bpm_list[start:])
+            else:
+                bpm_list = self.ecg_processor.bpm_list
 
-            self.ecg_processor.bpm_reg = self.ecg_processor.polymer_regression(np.arange(len(bpm_list)), bpm_list)
+            self.ecg_processor.bpm_reg = []
+            if self.ecg_processor.bpm_tag:
+                start = 0
+                for tag in self.ecg_processor.bpm_tag:
+                    bpm_segment = bpm_list[start:tag]
+                    if bpm_segment:
+                        bpm_reg_segment = self.ecg_processor.polymer_regression(np.arange(len(bpm_segment)), bpm_segment)
+                        self.ecg_processor.bpm_reg.extend(bpm_reg_segment)
+                    start = tag
+                bpm_segment = bpm_list[start:]
+                if bpm_segment:
+                    if len(bpm_segment) <= 2:
+                        bpm_reg_segment = [np.mean(bpm_segment)] * len(bpm_segment)
+                    else:
+                        bpm_reg_segment = self.ecg_processor.polymer_regression(np.arange(len(bpm_segment)), bpm_segment)
+                    self.ecg_processor.bpm_reg.extend(bpm_reg_segment)
+            else:
+                self.ecg_processor.bpm_reg = self.ecg_processor.polymer_regression(np.arange(len(bpm_list)), bpm_list)
             self.progress.set(100)
             self.progress_label.config(text="Processing complete")
             self.root.after(0, show_peak_viewer)
