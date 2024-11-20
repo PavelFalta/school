@@ -421,7 +421,7 @@ class ECGClusterViewer:
         filtered_points = good_cluster_points[distances_from_centroid < max_distance]
 
         # Move the boundaries 1/4th towards the centroid
-        moved_points = centroid + 0.85 * (filtered_points - centroid)
+        moved_points = centroid + 1 * (filtered_points - centroid) #0.85
 
         # Recalculate the convex hull for the moved points
         if len(moved_points) >= 3:
