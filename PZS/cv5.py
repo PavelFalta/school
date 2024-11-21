@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 M = np.ones((4, 4), dtype=complex)
 
@@ -13,4 +14,6 @@ V = [[8],
      [0]]
 
 res = M @ V
-print(res)
+print(np.abs(res))
+plt.plot(np.abs(res))
+plt.show()
