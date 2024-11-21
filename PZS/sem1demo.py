@@ -8,7 +8,7 @@ import random
 import time
 import matplotlib.pyplot as plt
 
-class ECGPeakDetector:
+class ecg_peak_detector:
     def __init__(self, data_path, hz, seconds):
         self.data_path = data_path
         self.hz = hz
@@ -18,19 +18,24 @@ class ECGPeakDetector:
         self.bpm_reg = None
         self.prev_std = []
         self.bpm_tag = []
-        self.last_peak_num = 0
 
     def load_data(self):
+        # načtení dat z dané cesty
         data = np.fromfile(self.data_path, dtype=np.int16)
         return data
 
     def pan_tompkins(self, i, ecg_signal, lowcut=1, highcut=30, filter_order=2, window_duration=0.12):
+        # aplikace bandpass filtru
         filtered_signal = self._bandpass_filter(ecg_signal, lowcut, highcut, self.hz, filter_order)
+        # diferenciace signálu
         differentiated_signal = np.diff(filtered_signal, prepend=filtered_signal[0])
+        # kvadratizace signálu
         squared_signal = differentiated_signal ** 2
+        # aplikace pohyblivého průměru
         window_size = int(window_duration * self.hz)
         mwi_signal = np.convolve(squared_signal, np.ones(window_size) / window_size, mode='same')
 
+        # kontrola stability signálu
         if i > 20 and np.std(mwi_signal) < 0.01 * np.mean(self.prev_std):
             self.bpm_tag.append(i)
         else:
@@ -39,12 +44,18 @@ class ECGPeakDetector:
         return mwi_signal
 
     def detect_r_peaks(self, processed_signal, initial_threshold_factor=0.5):
+        # nastavení minimální vzdálenosti mezi vrcholy
         min_distance = int(self.hz * 60 / 250)
+        # výpočet počátečního prahu
         initial_threshold = self._calculate_initial_threshold(processed_signal, initial_threshold_factor)
+        # aplikace lowpass filtru
         filtered_processed_signal = self._lowpass_filter(processed_signal, 15, self.hz)
+        # detekce vrcholů
         peaks, properties = find_peaks(filtered_processed_signal, height=initial_threshold, distance=min_distance)
 
+        # dynamické prahování
         r_peaks = self._dynamic_thresholding(peaks, filtered_processed_signal, initial_threshold)
+        # filtrování vrcholů
         r_peaks = self._filter_peaks(r_peaks, filtered_processed_signal)
 
         return np.array(r_peaks)
@@ -56,12 +67,13 @@ class ECGPeakDetector:
         no_improvement_count = 0
         degree = 1
 
+        # hledání nejlepšího stupně polynomu
         while no_improvement_count < 20:
             poly = PolynomialFeatures(degree=degree)
-            X_poly = poly.fit_transform(x.reshape(-1, 1))
+            x_poly = poly.fit_transform(x.reshape(-1, 1))
             model = LinearRegression()
-            model.fit(X_poly, y)
-            y_pred = model.predict(X_poly)
+            model.fit(x_poly, y)
+            y_pred = model.predict(x_poly)
             r2 = r2_score(y, y_pred)
 
             if r2 > best_r2:
@@ -74,10 +86,11 @@ class ECGPeakDetector:
 
             degree += 1
 
-        print(f"Best degree: {best_degree} with R2: {best_r2}")
+        print(f"nejlepší stupeň: {best_degree} s r2: {best_r2}")
         return best_y_pred
 
     def _bandpass_filter(self, signal, lowcut, highcut, fs, order):
+        # aplikace bandpass filtru
         nyquist = 0.5 * fs
         low = lowcut / nyquist
         high = highcut / nyquist
@@ -85,12 +98,14 @@ class ECGPeakDetector:
         return filtfilt(b, a, signal)
 
     def _lowpass_filter(self, signal, cutoff, fs, order=2):
+        # aplikace lowpass filtru
         nyquist = 0.5 * fs
         normal_cutoff = cutoff / nyquist
         b, a = butter(order, normal_cutoff, btype='low')
         return filtfilt(b, a, signal)
 
     def _calculate_initial_threshold(self, signal, factor):
+        # výpočet počátečního prahu
         median = np.median(signal)
         mad = np.median(np.abs(signal - median))
         return median + factor * mad
@@ -102,6 +117,7 @@ class ECGPeakDetector:
         rr_intervals = []
         r_peaks = []
 
+        # dynamické prahování vrcholů
         for peak in peaks:
             if signal[peak] > threshold_high:
                 signal_peak = 0.125 * signal[peak] + 0.875 * signal_peak
@@ -121,6 +137,7 @@ class ECGPeakDetector:
             max_peak = np.argmax(signal[r_peaks])
             res.append(r_peaks.pop(max_peak))
 
+        # filtrování vrcholů
         for i, peak in enumerate(r_peaks):
             distance = peak - r_peaks[i-1] if i > 0 else np.mean(np.diff(r_peaks))
             mean_amplitude = np.mean(signal[r_peaks])
@@ -134,16 +151,6 @@ class ECGPeakDetector:
 
             res.append(peak)
 
-        if self.last_peak_num:
-            while len(res) > self.last_peak_num + 2:
-                min_peak_index = np.argmin(signal[res])
-                res.pop(min_peak_index)
-            while len(res) < self.last_peak_num - 2 and len(r_peaks) > 0:
-                max_peak_index = np.argmax(signal[r_peaks])
-                res.append(r_peaks[max_peak_index])
-                r_peaks = np.delete(r_peaks, max_peak_index)
-        self.last_peak_num = len(res)
-
         return res
     
 if __name__ == "__main__":
@@ -151,33 +158,32 @@ if __name__ == "__main__":
     hz = 128  
     seconds = 10 
 
-    detector = ECGPeakDetector(data_path, hz, seconds)
+    detector = ecg_peak_detector(data_path, hz, seconds)
     ecg_signal = detector.load_data()
 
-    print("ECG data loaded.")
+    print("ecg data nactena.")
     
     while True:
         start = random.randint(0, len(ecg_signal) - hz * seconds)
         segment = ecg_signal[start:start + hz * seconds]
-        print(f"Processing segment from {start} to {start + hz * seconds}")
+        print(f"zpracovani segmentu od {start} do {start + hz * seconds}")
 
         processed_signal = detector.pan_tompkins(start, segment)
-        print("Signal processed using Pan-Tompkins algorithm.")
+        print("signal zpracovan pomoci pan-tompkins algoritmu.")
 
         r_peaks = detector.detect_r_peaks(processed_signal)
 
-        # Normalize the processed signal to have the same amplitude as the segment signal
+        # normalizujeme signal pro lepsi vizualizaci
         processed_signal = processed_signal * (np.max(segment) / np.max(processed_signal))
 
-
-        print(f"Detected {len(r_peaks)} R-peaks in the segment.")
+        print(f"detekovano {len(r_peaks)} r-vrcholu v segmentu.")
 
         plt.figure(figsize=(12, 6))
-        plt.plot(segment, label="Original ECG Signal", color='lightblue')
-        plt.plot(processed_signal, label="Processed Signal", color='red')
-        plt.plot(r_peaks, processed_signal[r_peaks], "x", label="Detected R-peaks")
+        plt.plot(segment, label="originalni ecg signal", color='lightblue')
+        plt.plot(processed_signal, label="zpracovany signal", color='red')
+        plt.plot(r_peaks, processed_signal[r_peaks], "x", label="detekovane r-vrcholy")
         plt.legend()
-        plt.title(f"ECG Segment from {start} to {start + hz * seconds} and Detected R-peaks")
-        plt.xlabel("Sample")
-        plt.ylabel("Amplitude")
+        plt.title(f"ecg segment od {start} do {start + hz * seconds} a detekovane r-vrcholy")
+        plt.xlabel("vzorek")
+        plt.ylabel("amplituda")
         plt.show()
