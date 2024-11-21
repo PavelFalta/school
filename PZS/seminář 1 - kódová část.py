@@ -8,7 +8,7 @@ import random
 import time
 import matplotlib.pyplot as plt
 
-class ecg_peak_detector:
+class ECGPeakDetector:
     def __init__(self, data_path, hz, seconds):
         self.data_path = data_path
         self.hz = hz
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     hz = 1000
     seconds = 10 
 
-    detector = ecg_peak_detector(data_path, hz, seconds)
+    detector = ECGPeakDetector(data_path, hz, seconds)
     ecg_signal = detector.load_data()
 
     print("ecg data nactena.")
