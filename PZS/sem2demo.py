@@ -116,7 +116,6 @@ class ECGClusterer:
         return pca.fit_transform(features)
 
 
-# Example usage
 if __name__ == "__main__":
     data_path = "/home/pavel/py/school/PZS/data/mit-bih-normal-sinus-rhythm-database-1.0.0/18184.dat"
     hz = 128
