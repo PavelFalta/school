@@ -61,7 +61,7 @@ class ECGPeakDetector:
         #print(f"{i}: {np.std(mwi_signal)} vs {0.005 * np.mean(self.prev_std)}")
 
         if i > 20 and np.std(mwi_signal) < 0.01 * np.mean(self.prev_std):
-            print(f"Invalid signal: {i}, {np.std(mwi_signal)} is less than 0.5 * {np.mean(self.prev_std)}")
+            #print(f"Invalid signal: {i}, {np.std(mwi_signal)} is less than 0.5 * {np.mean(self.prev_std)}")
             self.bpm_tag.append(i)
         else:
             self.prev_std.append(np.std(mwi_signal))
