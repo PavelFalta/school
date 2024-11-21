@@ -154,8 +154,8 @@ class ecg_peak_detector:
         return res
     
 if __name__ == "__main__":
-    data_path = "/home/pavel/py/school/PZS/data/mit-bih-normal-sinus-rhythm-database-1.0.0/18184.dat"
-    hz = 128  
+    data_path = "/home/pavel/py/school/PZS/data/brno-university-of-technology-ecg-quality-database-but-qdb-1.0.0/122001/122001_ECG.dat"
+    hz = 1000
     seconds = 10 
 
     detector = ecg_peak_detector(data_path, hz, seconds)
@@ -176,7 +176,8 @@ if __name__ == "__main__":
         # normalizujeme signal pro lepsi vizualizaci
         processed_signal = processed_signal * (np.max(segment) / np.max(processed_signal))
 
-        print(f"detekovano {len(r_peaks)} r-vrcholu v segmentu.")
+        print(f"detekovano {len(r_peaks)} r-vrcholu v segmentu, BPM {60 * len(r_peaks) / seconds}")
+
 
         plt.figure(figsize=(12, 6))
         plt.plot(segment, label="originalni ecg signal", color='lightblue')

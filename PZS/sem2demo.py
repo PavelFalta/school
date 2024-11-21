@@ -6,6 +6,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+from scipy.spatial import ConvexHull
 
 class ECGClusterer:
     def __init__(self, data_path, hz, seconds):
@@ -14,30 +15,37 @@ class ECGClusterer:
         self.seconds = seconds
 
     def load_data(self):
+        # načtení dat ze souboru
         return np.fromfile(self.data_path, dtype=np.int16)
 
     def preprocess_data(self, data):
+        # předzpracování dat
         data = self._normalize_data(data)
         segments = self._segment_data(data)
         features = [self._extract_features(segment) for segment in segments]
-        self._rank_features_with_pca(features)
+        #self._rank_features_with_pca(features)
         return np.array(features)
 
     def kmeans_clustering(self, features, n_clusters):
+        # k-means clustering
         scaled_features = self._scale_features(features)
         reduced_features = self._reduce_dimensionality(scaled_features)
         kmeans = KMeans(n_clusters=n_clusters)
         kmeans.fit(reduced_features)
-        return kmeans.labels_
+        self.labels = kmeans.labels_
+        return reduced_features, self.labels
 
     def _normalize_data(self, data):
+        # normalizace dat
         return (data - np.mean(data)) / np.std(data)
 
     def _segment_data(self, data):
+        # segmentace dat
         window_size = self.hz * self.seconds
         return [data[i:i + window_size] for i in range(0, len(data), window_size)]
 
     def _extract_features(self, segment):
+        # extrakce příznaků ze segmentu
         f_nyquist = self.hz / 2
         vlf_band = (0.003 * f_nyquist, 0.04 * f_nyquist)
         lf_band = (0.04 * f_nyquist, 0.15 * f_nyquist)
@@ -73,15 +81,16 @@ class ECGClusterer:
         kurtosis = pd.Series(segment).kurtosis()
 
         return [
-            total_power, vlf_power, lf_power, hf_power, 
-            vlf_ratio, lf_ratio, lf_hf_ratio, 
-            spectral_entropy, mean_freq, 
-            std_val, 
-            max_val, min_val, range_val, rms_val, 
-            skewness, mean_val, kurtosis, peak_freq, bandwidth, median_freq, hf_ratio
+                total_power, vlf_power, lf_power, hf_power, 
+                vlf_ratio, lf_ratio, lf_hf_ratio, 
+                spectral_entropy, mean_freq, 
+                std_val, 
+                max_val, min_val, range_val, rms_val, 
+                skewness
         ]
 
     def _rank_features_with_pca(self, features):
+        # hodnocení příznaků pomocí pca
         feature_names = [
             "Total Power", "VLF Power", "LF Power", "HF Power", "VLF Ratio", 
             "LF Ratio", "LF/HF Ratio", "Spectral Entropy", 
@@ -108,36 +117,84 @@ class ECGClusterer:
             print(f"{i+1}. {feature}: {importance:.4f}")
 
     def _scale_features(self, features):
+        # škálování příznaků
         scaler = StandardScaler()
         return scaler.fit_transform(features)
 
     def _reduce_dimensionality(self, features):
+        # redukce dimenzionality pomocí pca
         pca = PCA(n_components=0.95)
         return pca.fit_transform(features)
 
+    def _highlight_good_cluster(self, reduced_features):
+        # zvýraznění dobrého clusteru
+        cluster_centers, cluster_sizes, middle_point = self._calculate_cluster_properties(reduced_features)
+        good_cluster_label = self._determine_good_cluster(cluster_centers, cluster_sizes, middle_point)
+        self._draw_cluster_boundaries(reduced_features, good_cluster_label)
+
+    def _calculate_cluster_properties(self, reduced_features):
+        # výpočet vlastností clusteru
+        cluster_centers = np.array([reduced_features[self.labels == label].mean(axis=0) for label in np.unique(self.labels)])
+        cluster_sizes = np.array([np.sum(self.labels == label) for label in np.unique(self.labels)])
+        middle_point = np.mean(reduced_features, axis=0)
+        return cluster_centers, cluster_sizes, middle_point
+
+    def _determine_good_cluster(self, cluster_centers, cluster_sizes, middle_point):
+        # určení dobrého clusteru
+        distances_to_middle = np.linalg.norm(cluster_centers - middle_point, axis=1)
+        normalized_sizes = cluster_sizes / np.max(cluster_sizes)
+        normalized_distances = distances_to_middle / np.max(distances_to_middle)
+        scores = normalized_sizes - normalized_distances
+        good_cluster_index = np.argmax(scores)
+        return np.unique(self.labels)[good_cluster_index]
+
+    def _draw_cluster_boundaries(self, reduced_features, good_cluster_label):
+        # vykreslení hranic clusteru
+        good_cluster_points = reduced_features[self.labels == good_cluster_label]
+        hull = ConvexHull(good_cluster_points)
+        centroid = np.mean(good_cluster_points, axis=0)
+        distances_from_centroid = np.linalg.norm(good_cluster_points - centroid, axis=1)
+        max_distance = np.percentile(distances_from_centroid, 99)
+        filtered_points = good_cluster_points[distances_from_centroid < max_distance]
+        moved_points = centroid + 1 * (filtered_points - centroid)
+        if len(moved_points) >= 3:
+            moved_hull = ConvexHull(moved_points)
+            for i, simplex in enumerate(moved_hull.simplices):
+                plt.plot(moved_points[simplex, 0], moved_points[simplex, 1], 'r--', lw=2, label='Predicted Good Signal' if not i else None)
+        plt.legend()
 
 if __name__ == "__main__":
-    data_path = "/home/pavel/py/school/PZS/data/mit-bih-normal-sinus-rhythm-database-1.0.0/18184.dat"
-    hz = 128
+    data_path = "/home/pavel/py/school/PZS/data/brno-university-of-technology-ecg-quality-database-but-qdb-1.0.0/122001/122001_ECG.dat"
+    hz = 1000
     seconds = 10
 
+    print("načítání dat...")
     clusterer = ECGClusterer(data_path, hz, seconds)
     data = clusterer.load_data()
+    print("data načtena.")
+
+    print("předzpracování dat...")
     features = clusterer.preprocess_data(data)
-    labels = clusterer.kmeans_clustering(features, n_clusters=3)
+    print("předzpracování dokončeno.")
 
-    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-    clusterer.fig = fig
-    clusterer.axs = axs
-    clusterer.labels = labels
-    clusterer.features = features
+    print("provádění k-means clusteringu...")
+    reduced_features, labels = clusterer.kmeans_clustering(features, n_clusters=3)
+    print("k-means clustering dokončen.")
 
+    print("redukce dimenzionality pomocí pca...")
     pca = PCA(n_components=2)
-
     reduced_features = pca.fit_transform(features)
-    scatter = axs[1].scatter(reduced_features[:, 0], reduced_features[:, 1], c=labels, cmap='viridis')
-    fig.colorbar(scatter, ax=axs[1])
-    axs[1].set_title('ECG Clusters')
-    axs[1].set_xlabel('Principal Component 1')
-    axs[1].set_ylabel('Principal Component 2')
+    print("redukce dimenzionality dokončena.")
+
+    print("vykreslování grafu...")
+    plt.figure(figsize=(10, 8))
+    scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=labels, cmap='viridis')
+    plt.colorbar(scatter)
+    plt.title('ECG Clusters')
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+
+    print("zvýraznění dobrého clusteru...")
+    clusterer._highlight_good_cluster(reduced_features)
     plt.show()
+    print("hotovo.")
