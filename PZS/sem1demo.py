@@ -175,16 +175,16 @@ if __name__ == "__main__":
 
         # normalizujeme signal pro lepsi vizualizaci
         processed_signal = processed_signal * (np.max(segment) / np.max(processed_signal))
+        bpm = 60 * len(r_peaks) / seconds
 
-        print(f"detekovano {len(r_peaks)} r-vrcholu v segmentu, BPM {60 * len(r_peaks) / seconds}")
-
+        print(f"detekovano {len(r_peaks)} r-vrcholu v segmentu, BPM {bpm}")
 
         plt.figure(figsize=(12, 6))
-        plt.plot(segment, label="originalni ecg signal", color='lightblue')
-        plt.plot(processed_signal, label="zpracovany signal", color='red')
-        plt.plot(r_peaks, processed_signal[r_peaks], "x", label="detekovane r-vrcholy")
+        plt.plot(np.linspace(0, seconds, len(segment)), segment, label="Původní ECG", color='deepskyblue')
+        plt.plot(np.linspace(0, seconds, len(processed_signal)), processed_signal, label="Předzpracovaný signál", color='red')
+        plt.plot(np.array(r_peaks) / hz, processed_signal[r_peaks], "x", label="Detekované R-vrcholy", color='black')
         plt.legend()
-        plt.title(f"ecg segment od {start} do {start + hz * seconds} a detekovane r-vrcholy")
-        plt.xlabel("vzorek")
-        plt.ylabel("amplituda")
+        plt.title(f"Vizualizace Detekce R-vrcholu v Segmentu, BPM: {bpm}")
+        plt.xlabel("Sekundy")
+        plt.ylabel("Amplituda")
         plt.show()

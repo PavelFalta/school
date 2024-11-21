@@ -154,7 +154,7 @@ class ECGClusterer:
         hull = ConvexHull(good_cluster_points)
         centroid = np.mean(good_cluster_points, axis=0)
         distances_from_centroid = np.linalg.norm(good_cluster_points - centroid, axis=1)
-        max_distance = np.percentile(distances_from_centroid, 99)
+        max_distance = np.percentile(distances_from_centroid, 95)
         filtered_points = good_cluster_points[distances_from_centroid < max_distance]
         moved_points = centroid + 1 * (filtered_points - centroid)
         if len(moved_points) >= 3:
@@ -196,5 +196,25 @@ if __name__ == "__main__":
 
     print("zvýraznění dobrého clusteru...")
     clusterer._highlight_good_cluster(reduced_features)
+    
+    biggest_cluster_label = np.argmax(np.bincount(labels))
+    biggest_cluster_size = np.sum(labels == biggest_cluster_label)
+    print(f"velikost největšího clusteru: {biggest_cluster_size}")
+
+    # počítání statistik
+    good_cluster_label = clusterer._determine_good_cluster(*clusterer._calculate_cluster_properties(reduced_features))
+    good_cluster_points = reduced_features[labels == good_cluster_label]
+    centroid = np.mean(good_cluster_points, axis=0)
+    distances_from_centroid = np.linalg.norm(good_cluster_points - centroid, axis=1)
+    max_distance = np.percentile(distances_from_centroid, 50)
+    anomalies = np.sum(distances_from_centroid >= max_distance)
+    total_segments = len(reduced_features)
+    good_segments = total_segments - anomalies
+    anomaly_percentage = (anomalies / total_segments) * 100
+    good_percentage = (good_segments / total_segments) * 100
+
+    print(f"dobré segmenty: {good_segments} ({good_percentage:.2f}%)")
+    print(f"anomálie: {anomalies} ({anomaly_percentage:.2f}%)")
+
     plt.show()
     print("hotovo.")

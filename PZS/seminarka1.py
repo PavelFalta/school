@@ -302,7 +302,7 @@ class ECGClusterViewer:
         hull = ConvexHull(good_cluster_points)
         centroid = np.mean(good_cluster_points, axis=0)
         distances_from_centroid = np.linalg.norm(good_cluster_points - centroid, axis=1)
-        max_distance = np.percentile(distances_from_centroid, 99)
+        max_distance = np.percentile(distances_from_centroid, 95)
         filtered_points = good_cluster_points[distances_from_centroid < max_distance]
         moved_points = centroid + 1 * (filtered_points - centroid)
         if len(moved_points) >= 3:
