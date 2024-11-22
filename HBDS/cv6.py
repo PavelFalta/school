@@ -9,7 +9,10 @@ from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bo
 
 
 def pipeline(path, k):
-    data = pd.read_csv(path)
+    if 0:
+        data = pd.read_csv(path, header=None, names=["V1", "V2", "Cluster"], sep='\t')
+    else:
+        data = pd.read_csv(path)
 
     print(data)
 
@@ -18,15 +21,14 @@ def pipeline(path, k):
 
     print("Dataset shape:", data.shape)
 
-    k = 2  # Minimum samples for DBSCAN
     nearest_neighbors = NearestNeighbors(n_neighbors=k)
-    neighbors = nearest_neighbors.fit(data)
-    distances, indices = neighbors.kneighbors(data)
+    neighbors = nearest_neighbors.fit(data[["V1", "V2"]])
+    distances, indices = neighbors.kneighbors(data[["V1", "V2"]])
 
     # Sort the distances to identify the "elbow" point
     distances = np.sort(distances[:, -1])
 
-    # Plot the k-distance plot
+    #Plot the k-distance plot
     plt.figure(figsize=(10, 6))
     plt.plot(distances, marker='o', linestyle='-', markersize=4)
     plt.xlabel('Points sorted by distance')
@@ -101,9 +103,10 @@ def pipeline(path, k):
         plt.tight_layout()
         plt.show()
 
-    dbscan_evaluation(data, eps_min=0.5, eps_max=2, eps_step=0.01, k=2)
+    #dbscan_evaluation(data, eps_min=0.5, eps_max=3, eps_step=0.01, k = k)
 
-    eps_candidates = [1.55]
+    eps_candidates = np.linspace(1.4, 1.5, 10)
+    
 
     for eps_value in eps_candidates:
 
@@ -112,14 +115,39 @@ def pipeline(path, k):
 
         # Visualize DBSCAN clustering results
         plt.figure(figsize=(10, 6))
-        sns.scatterplot(x=data["V1"], y=data["V2"], hue=dbscan_labels, palette="plasma", s=50, edgecolor="k")
-        plt.title("DBSCAN Clustering Results")
+        sns.scatterplot(x=data["V1"], y=data["V2"], hue=dbscan_labels, palette="tab10", s=50, edgecolor="k")
+        plt.title(f"DBSCAN Clustering Results, EPS: {eps_value}")
         plt.xlabel("V1")
         plt.ylabel("V2")
         plt.legend(title="Cluster", loc="upper right", bbox_to_anchor=(1.15, 1))
         plt.show()
 
+def DBSCN(data, eps, min_samples):
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples).fit(data)
+    dbscan_labels = dbscan.labels_
+
+    # Visualize DBSCAN clustering results
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(x=data["V1"], y=data["V2"], hue=dbscan_labels, palette="tab10", s=50, edgecolor="k")
+    plt.title(f"DBSCAN Clustering Results, EPS: {eps}")
+    plt.xlabel("V1")
+    plt.ylabel("V2")
+    plt.legend(title="Cluster", loc="upper right", bbox_to_anchor=(1.15, 1))
+    plt.show()
+
 
 if __name__ == "__main__":
-    #pipeline("HBDS/Datasets/Compound.csv", 2)
-    pipeline("HBDS/Datasets/aggregation.csv", 3)
+    #pipeline("HBDS/Datasets/Compound.csv", 3)# 1.45
+    #pipeline("HBDS/Datasets/aggregation.csv", 8) #1.55
+    #pipeline("HBDS/Datasets/jain.txt", 2) #2.63
+    #pipeline("HBDS/Datasets/spiral.txt", 2) #2.63
+
+    data = pd.read_csv("HBDS/Datasets/Compound.csv")
+    DBSCN(data, 1.4, 3)
+    data = pd.read_csv("HBDS/Datasets/aggregation.csv")
+    DBSCN(data, 1.55, 8)
+    data = pd.read_csv("HBDS/Datasets/jain.txt", header=None, names=["V1", "V2", "Cluster"], sep='\t')
+    DBSCN(data, 2.63, 2)
+    data = pd.read_csv("HBDS/Datasets/spiral.txt", header=None, names=["V1", "V2", "Cluster"], sep='\t')
+    DBSCN(data, 2.63, 2)
+
