@@ -22,3 +22,16 @@ print(fibonnaci(32))
 
 print(perf_counter()-start)
 
+
+def brian_kerningan(n):
+    print(bin(n))
+
+    count = 0
+
+    while n:
+        n = n & (n - 1)
+        count += 1
+
+    return count
+
+print(brian_kerningan(255))
