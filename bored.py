@@ -1,4 +1,6 @@
 import numpy as np
+from time import perf_counter
+from collections import defaultdict
 
 # Set the dimensions of the matrices
 # rows_A, cols_A = 3, 2
@@ -51,4 +53,148 @@ print(1//2)
 
 
 
+def permutations(arr):
+    if len(arr) == 1:
+        return [arr]
+    else:
+        perms = []
+        for i, val in enumerate(arr):
+            for perm in permutations(arr[:i] + arr[i+1:]):
+                perms.append([val] + perm)
+        return perms
+    
+def perm(arr):
 
+    def backtrack(start):
+        if start == len(arr):
+            res.append(arr[:])
+            return
+        
+        for i in range(start, len(arr)):
+            arr[start], arr[i] = arr[i], arr[start]
+
+            backtrack(start + 1)
+
+            arr[start], arr[i] = arr[i], arr[start]
+
+    res = []
+    backtrack(0)
+    return res
+
+
+# start = perf_counter()
+# p1 = permutations([1, 2, 3,4,5,6,7,8,9])
+# print(perf_counter() - start)
+
+
+# start = perf_counter()
+# p2 = perm([1, 2, 3,4,5,6,7,8,9])
+# print(perf_counter() - start)
+
+
+def ffib(n):
+    def fib_helper(k):
+        if k == 0:
+            return (0,1)
+        
+        a, b = fib_helper(k // 2)
+        c = a * ((b << 1) - a)
+        d = a ** 2 + b ** 2
+
+        if k % 2 == 0:
+            return (c, d)
+        else:
+            return (d, c + d)
+        
+    return fib_helper(n)[0]
+    
+def fib(n):
+    if n <= 0:
+        return 0
+    
+    elif n == 1:
+        return 1
+    
+    a, b = 0, 1 
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    
+    return b
+
+def sfib(n):
+    sqrt5 = 5 ** 0.5
+    fibN = ((1 + sqrt5) / 2) ** n - ((1 - sqrt5) / 2) ** n
+    return round(fibN / sqrt5)
+
+# print(ffib(858100))
+# print(sfib(1500))
+
+start = perf_counter()
+ffib(1200)
+print(perf_counter() - start)
+
+start = perf_counter()
+sfib(1200)
+print(perf_counter() - start)
+
+
+start = perf_counter()
+print(fib(9))
+print(perf_counter() - start)
+
+def myperm(arr):
+
+    def backtrack(start):
+        if start == len(arr):
+            res.append(arr[:])
+            return
+
+        for i in range(start, len(arr)):
+
+            arr[start], arr[i] = arr[i], arr[start]
+            backtrack(start+1)
+            arr[start], arr[i] = arr[i], arr[start]
+
+
+    res = []
+    backtrack(0)
+    return res
+
+
+print(myperm([1,2,3]))
+
+
+def bfs_arr(graph, start, finish):
+
+    adjancency_dict = defaultdict(list)
+
+    for u,v in graph:
+        adjancency_dict[u].append(v)
+        adjancency_dict[v].append(u)
+
+    
+    queue = deque([(start, [])])
+    visited = set([start])
+
+    while queue:
+        current, path = queue.popleft()
+
+        if current == finish:
+            return path + [current]
+
+        for neighbor in adjancency_dict[current]:
+            if neighbor not in visited:
+                queue.append((neighbor, path+[neighbor]))
+                visited.add(neighbor)
+
+
+    
+print(bfs_arr([[0,1],[1,5],[1,9],[9,33],[39,6],[33,91],[91,39],[6,3]], 0, 3))
+
+
+def mat_rotate_90(matrix):
+    return list(zip(*matrix[::-1]))
+
+
+
+print(mat_rotate_90([[1,2,3],[4,5,6],[7,8,9]]))
