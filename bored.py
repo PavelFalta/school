@@ -123,8 +123,12 @@ def fib(n):
 
 def sfib(n):
     sqrt5 = 5 ** 0.5
-    fibN = ((1 + sqrt5) / 2) ** n - ((1 - sqrt5) / 2) ** n
-    return round(fibN / sqrt5)
+
+    psi = (1 + sqrt5) / 2
+    phi = (1 - sqrt5) / 2
+    
+    fib = (psi ** n - phi ** n) / sqrt5
+    return round(fib)
 
 # print(ffib(858100))
 # print(sfib(1500))
@@ -198,3 +202,63 @@ def mat_rotate_90(matrix):
 
 
 print(mat_rotate_90([[1,2,3],[4,5,6],[7,8,9]]))
+
+
+
+graph = {
+    'A': ['B', 'C'],
+    'B': ['D', 'E'],
+    'C': ['F'],
+    'D': ['F'],
+    'E': ['G'],
+    'F': ['H'],
+    'G': ['H', 'I'],
+    'H': ['J'],
+    'I': ['J'],
+    'J': []
+}
+
+
+def topological_sorting(graph):
+    degrees = {i:0 for i, _ in graph.items()}
+    
+
+    for u in graph:
+        for v in graph[u]:
+            degrees[v] += 1
+    
+    print(degrees)
+    
+    queue = deque([u for u,v in degrees.items() if v == 0])
+
+    topo = []
+
+    while queue:
+        current = queue.popleft()
+        topo.append(current)
+
+        for neighbor in graph[current]:
+            degrees[neighbor] -= 1
+            if not degrees[neighbor]:
+                queue.append(neighbor)
+
+    return topo
+
+def shortest_path_dag(graph, start):
+    topo = topological_sorting(graph=graph)
+
+
+    distances = {i:float("inf") for i, _ in graph.items()}
+    distances[start] = 0
+
+    for node in topo:
+        if not distances[node] == float("inf"):
+            for neighbor in graph[node]:
+                if distances[node] + 1 < distances[neighbor]:
+                    distances[neighbor] = distances[node] + 1
+
+    return distances
+
+print(topological_sorting(graph=graph))
+print(shortest_path_dag(graph=graph, start="A"))
+        
