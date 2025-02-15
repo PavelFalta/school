@@ -9,7 +9,7 @@ from collections import deque
 #
 
 # this is auto commited
-# i think at least
+# i think at least, even after i quit and reopen? with ai message i think !!
 
 @cache
 def fibonnaci(n):
