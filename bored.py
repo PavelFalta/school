@@ -6,6 +6,8 @@
 # # rows_A, cols_A = 3, 2
 # # rows_B, cols_B = cols_A, 4  # cols_A must equal rows_B for multiplication
 
+#is this also commited?
+
 # def matmul(A, B):
 #     assert A.shape[1] == B.shape[0]
 #     sh = A.shape[0], B.shape[1]
