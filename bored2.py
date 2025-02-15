@@ -11,6 +11,16 @@ from collections import deque
 # this is auto commited
 # i think at least, even after i quit and reopen? with ai message i think !!
 #what an exciting journey guys
+# below is the first act of hamlet
+# act 1 scene 1
+# Elsinore. A platform before the castle.
+# FRANCISCO at his post. Enter to him BERNARDO
+# BERNARDO
+# Who's there?
+# FRANCISCO
+# Nay, answer me: stand, and unfold yourself.
+# BERNARDO
+# Long live the king!
 
 @cache
 def fibonnaci(n):
