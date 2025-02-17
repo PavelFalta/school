@@ -36,5 +36,6 @@
 ### Typy modelu
 - agilni vyvoj
 ```
-https://www.agilemanifesto.org
+https://agilemanifesto.org
 ```
+
