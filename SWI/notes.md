@@ -33,5 +33,8 @@
 - pravidla
 
 
-### Historie
-
+### Typy modelu
+- agilni vyvoj
+```
+https://www.agilemanifesto.org
+```
