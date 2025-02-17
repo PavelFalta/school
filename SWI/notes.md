@@ -58,3 +58,8 @@ https://agilemanifesto.org
 #### rapid application development
 
 #### RUP
+
+## agilni metodiky
+#### extreme programming
+#### scrum
+#### kanban
