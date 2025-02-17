@@ -1,11 +1,11 @@
 # SWI ZAPISKY
-## ukonceni
+### ukonceni
 - seminarni prace
-## zkouska
+### zkouska
 - ustni obhajoba
 
 
-## lit 
+### lit 
 - sommerville ian - software engineering (prvni sekce, asi precist tbh)
 
 # 1
@@ -25,3 +25,13 @@
     implementace
     validace
     evoluce
+
+### SCRUM
+
+- role
+- artefakt
+- pravidla
+
+
+### Historie
+
