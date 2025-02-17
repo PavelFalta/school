@@ -38,4 +38,23 @@
 ```
 https://agilemanifesto.org
 ```
+#### vodopoadovy model
+- take znam jako SDLC
+- naprd :p (moc expensive delat zmeny hluboko ve vyvoji)
 
+#### V-model
+- lepsi ale starej furt
+- velka testovaci vetev
+- validace paralelne s vyvojem
+- zavedl pojmy
+
+#### inkrementalni vs iterativni
+
+#### boehm spiral
+
+#### prototype model
+
+
+#### rapid application development
+
+#### RUP
