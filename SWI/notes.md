@@ -6,4 +6,8 @@
 
 
 ## lit 
-- sommerville ian - software engineering
+- sommerville ian - software engineering (prvni sekce, asi precist tbh)
+
+# 1
+### systemove inzenyrstvi
+- implementace/testovani/udrzba
