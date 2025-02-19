@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 from numpy.random import randn
+import matplotlib.pyplot as plt
 N = 1000 # počet datových bodů
 
 # pomocí gausovského rozdělení nagenerujeme body v prostoru váha-výška
@@ -31,14 +32,13 @@ df['m^2'] = df['vyska']**2
 df['vaha*vyska'] = df['vyska']*df['vaha']
 df['h^2'] = df['vaha']**2
 
-import matplotlib.pyplot as plt
 
-plt.scatter(data['vyska'], data['vaha'], marker = 'x')
-plt.title("Datové body")
-plt.xlabel('výška [m]')
-plt.ylabel('váha [kg]')
-plt.legend()
-plt.show()
+# plt.scatter(data['vyska'], data['vaha'], marker = 'x')
+# plt.title("Datové body")
+# plt.xlabel('výška [m]')
+# plt.ylabel('váha [kg]')
+# plt.legend()
+# plt.show()
 
 promichano_index = df.index.to_list()
 np.random.shuffle(promichano_index)
@@ -48,13 +48,13 @@ print(df.index[10])
 trenovaci_data = df.filter(promichano_index[:trenovaci_data_velikost], axis = 0) # vem nahodne indexy
 testovaci_data = df.filter(promichano_index[trenovaci_data_velikost:], axis = 0) # vem nahodne indexy
 
-plt.scatter(trenovaci_data['vyska'], trenovaci_data['vaha'], marker = 'x', label='trénovací')
-plt.scatter(testovaci_data['vyska'], testovaci_data['vaha'], marker = 'o', label='testovací')
-plt.title("Datové body")
-plt.xlabel('výška [m]')
-plt.ylabel('váha [kg]')
-plt.legend()
-plt.show()
+# plt.scatter(trenovaci_data['vyska'], trenovaci_data['vaha'], marker = 'x', label='trénovací')
+# plt.scatter(testovaci_data['vyska'], testovaci_data['vaha'], marker = 'o', label='testovací')
+# plt.title("Datové body")
+# plt.xlabel('výška [m]')
+# plt.ylabel('váha [kg]')
+# plt.legend()
+# plt.show()
 
 # statisticke ukazatele
 print(trenovaci_data.describe())
