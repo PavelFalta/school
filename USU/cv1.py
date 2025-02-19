@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from numpy.random import randn
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+
 N = 1000 # počet datových bodů
 
 # pomocí gausovského rozdělení nagenerujeme body v prostoru váha-výška
@@ -32,6 +34,8 @@ df['m^2'] = df['vyska']**2
 df['vaha*vyska'] = df['vyska']*df['vaha']
 df['h^2'] = df['vaha']**2
 
+scaler = MinMaxScaler()
+df = pd.DataFrame(scaler.fit_transform(df), columns = df.columns)
 
 # plt.scatter(data['vyska'], data['vaha'], marker = 'x')
 # plt.title("Datové body")
