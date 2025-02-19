@@ -125,3 +125,17 @@ mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
 
 print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
 print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
+
+#optimize randomforest hyperparameters using bayes
+def train_model(n_estimators, max_depth):
+    model = RandomForestRegressor(n_estimators=int(n_estimators), max_depth=int(max_depth), random_state=0)
+    model.fit(X, y)
+    bmi_hat_trenovaci = model.predict(X)
+    mse_ls_modelu_trenovaci = ((trenovaci_data['bmi']-bmi_hat_trenovaci)**2).mean()
+    return -mse_ls_modelu_trenovaci
+
+pbounds = {'n_estimators': (10, 1000), 'max_depth': (1, 20)}
+optimizer = BayesianOptimization(f=train_model, pbounds=pbounds, random_state=1)
+optimizer.maximize(init_points=5, n_iter=10)
+
+print(optimizer.max)
