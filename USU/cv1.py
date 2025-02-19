@@ -130,6 +130,10 @@ print(f"Nejlepší model je polynom {best[1]} stupně")
 poly_model = make_pipeline(PolynomialFeatures(best[1]), LinearRegression())
 poly_model.fit(X, y)
 
+#print how the polynomial model looks like
+print(poly_model.named_steps['linearregression'].coef_)
+print(poly_model.named_steps['linearregression'].intercept_)
+
 # predikce na trénovacích datech
 bmi_hat_trenovaci = poly_model.predict(X)
 # predikce na testovacích datech
