@@ -34,8 +34,6 @@ df['m^2'] = df['vyska']**2
 df['vaha*vyska'] = df['vyska']*df['vaha']
 df['h^2'] = df['vaha']**2
 
-scaler = MinMaxScaler()
-df = pd.DataFrame(scaler.fit_transform(df), columns = df.columns)
 
 # plt.scatter(data['vyska'], data['vaha'], marker = 'x')
 # plt.title("Datové body")
@@ -82,6 +80,34 @@ bmi_hat_trenovaci = X @ koeficienty # vypocet predikce na trenovacich datech
 X_test_t = np.array(( np.ones(len(testovaci_data)),testovaci_data['vyska'], testovaci_data['vaha']))
 X_test = X_test_t.transpose()
 bmi_hat_testovaci = X_test @ koeficienty
+
+# vykresleni predikce a reality pro trenovaci data
+ax = plt.axes(projection = '3d')
+ax.scatter3D(trenovaci_data['vyska'], trenovaci_data['vaha'], trenovaci_data['bmi'], label = 'realita');
+ax.scatter3D(trenovaci_data['vyska'], trenovaci_data['vaha'], bmi_hat_trenovaci, label = 'predikce');
+ax.legend()
+ax.set_xlabel('výška [m]')
+ax.set_ylabel('váha [kg]')
+ax.set_zlabel('bmi')
+
+
+# vypocet chyby
+mse_ls_modelu_trenovaci = ((trenovaci_data['bmi']-bmi_hat_trenovaci)**2).mean()
+mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
+
+print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
+print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
+
+from sklearn.ensemble import RandomForestRegressor
+# sestavení regresorů z trénovacích dat
+X = np.array((trenovaci_data['vyska'], trenovaci_data['vaha'])).transpose()
+y = trenovaci_data['bmi']
+# vytvoření a naučení modelu - celá věda je toto
+model = RandomForestRegressor(n_estimators=100, max_depth=8,random_state=0)
+model.fit(X,y)
+# predikce modelu - aplikace
+bmi_hat_trenovaci = model.predict(X)
+bmi_hat_testovaci = model.predict(np.array((testovaci_data['vyska'], testovaci_data['vaha'])).transpose())
 
 # vykresleni predikce a reality pro trenovaci data
 ax = plt.axes(projection = '3d')
