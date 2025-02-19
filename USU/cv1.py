@@ -30,9 +30,9 @@ data = {"vyska": vyska ,"vaha" : vaha, "bmi" : bmi}
 df = pd.DataFrame(data) #
 df.to_csv('data_lide.csv', index = False)
 print(df.head(10))
-df['m^2'] = df['vyska']**2
-df['vaha*vyska'] = df['vyska']*df['vaha']
-df['h^2'] = df['vaha']**2
+# df['m^2'] = df['vyska']**2
+# df['vaha*vyska'] = df['vyska']*df['vaha']
+# df['h^2'] = df['vaha']**2
 
 
 # plt.scatter(data['vyska'], data['vaha'], marker = 'x')
@@ -98,18 +98,24 @@ mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
 print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
 print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
 
-from sklearn.ensemble import RandomForestRegressor
-#import logistické regrese
-from sklearn.linear_model import LogisticRegression
+#import polynomial regression
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+
+
 # sestavení regresorů z trénovacích dat
 X = np.array((trenovaci_data['vyska'], trenovaci_data['vaha'])).transpose()
 y = trenovaci_data['bmi']
 # vytvoření a naučení modelu - celá věda je toto
-model = LogisticRegression()
-model.fit(X,y)
-# predikce modelu - aplikace
-bmi_hat_trenovaci = model.predict(X)
-bmi_hat_testovaci = model.predict(np.array((testovaci_data['vyska'], testovaci_data['vaha'])).transpose())
+poly_model = make_pipeline(PolynomialFeatures(2), LinearRegression())
+poly_model.fit(X, y)
+
+# predikce na trénovacích datech
+bmi_hat_trenovaci = poly_model.predict(X)
+# predikce na testovacích datech
+X_test = np.array((testovaci_data['vyska'], testovaci_data['vaha'])).transpose()
+bmi_hat_testovaci = poly_model.predict(X_test)
 
 # vykresleni predikce a reality pro trenovaci data
 ax = plt.axes(projection = '3d')
