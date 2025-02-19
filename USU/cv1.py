@@ -108,7 +108,7 @@ from sklearn.pipeline import make_pipeline
 X = np.array((trenovaci_data['vyska'], trenovaci_data['vaha'])).transpose()
 y = trenovaci_data['bmi']
 # vytvoření a naučení modelu - celá věda je toto
-poly_model = make_pipeline(PolynomialFeatures(2), LinearRegression())
+poly_model = make_pipeline(PolynomialFeatures(4), LinearRegression())
 poly_model.fit(X, y)
 
 # predikce na trénovacích datech
