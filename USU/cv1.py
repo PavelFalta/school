@@ -104,7 +104,7 @@ from sklearn.ensemble import RandomForestRegressor
 X = np.array((trenovaci_data['vyska'], trenovaci_data['vaha'])).transpose()
 y = trenovaci_data['bmi']
 # vytvoření a naučení modelu - celá věda je toto
-model = RandomForestRegressor(n_estimators=100, max_depth=8,random_state=0)
+model = RandomForestRegressor(n_estimators=822, max_depth=18,random_state=0, min_samples_leaf=1, min_samples_split=3)
 model.fit(X,y)
 # predikce modelu - aplikace
 bmi_hat_trenovaci = model.predict(X)
@@ -148,7 +148,7 @@ pbounds = {
     'min_samples_split': (2, 20), 
     'min_samples_leaf': (1, 20)
 }
-optimizer = BayesianOptimization(f=train_model, pbounds=pbounds, random_state=1)
-optimizer.maximize(init_points=5, n_iter=100)
+# optimizer = BayesianOptimization(f=train_model, pbounds=pbounds, random_state=1)
+# optimizer.maximize(init_points=5, n_iter=100)
 
-print(optimizer.max)
+# print(optimizer.max)
