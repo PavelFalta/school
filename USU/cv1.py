@@ -149,6 +149,6 @@ pbounds = {
     'min_samples_leaf': (1, 20)
 }
 optimizer = BayesianOptimization(f=train_model, pbounds=pbounds, random_state=1)
-optimizer.maximize(init_points=5, n_iter=10)
+optimizer.maximize(init_points=5, n_iter=100)
 
 print(optimizer.max)
