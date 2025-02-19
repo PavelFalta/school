@@ -131,7 +131,7 @@ def train_model(n_estimators, max_depth):
     model = RandomForestRegressor(n_estimators=int(n_estimators), max_depth=int(max_depth), random_state=0)
     model.fit(X, y)
     bmi_hat_trenovaci = model.predict(X)
-    mse_ls_modelu_trenovaci = ((trenovaci_data['bmi']-bmi_hat_trenovaci)**2).mean()
+    mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
     return -mse_ls_modelu_trenovaci
 
 pbounds = {'n_estimators': (10, 1000), 'max_depth': (1, 20)}
