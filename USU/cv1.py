@@ -136,7 +136,9 @@ def train_model(n_estimators, max_depth, min_samples_split, min_samples_leaf):
         random_state=0
     )
     model.fit(X, y)
-    bmi_hat_testovaci = model.predict(X)
+
+    
+    bmi_hat_testovaci = model.predict(np.array((testovaci_data['vyska'], testovaci_data['vaha'])).transpose())
     mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
     return -mse_ls_modelu_testovaci
 
