@@ -96,7 +96,7 @@ mse_ls_modelu_trenovaci = ((trenovaci_data['bmi']-bmi_hat_trenovaci)**2).mean()
 mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
 
 print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
-print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
+print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}\n\n")
 
 #import polynomial regression
 from sklearn.preprocessing import PolynomialFeatures
@@ -130,6 +130,7 @@ ax.set_zlabel('bmi')
 mse_ls_modelu_trenovaci = ((trenovaci_data['bmi']-bmi_hat_trenovaci)**2).mean()
 mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
 
+print(f"Polynomial features + logistic regression")
 print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
 print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
 
