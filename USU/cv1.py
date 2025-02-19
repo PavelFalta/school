@@ -4,7 +4,6 @@ import pandas as pd
 from numpy.random import randn
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from bayes_opt import BayesianOptimization
 
 N = 1000 # počet datových bodů
 
@@ -100,11 +99,13 @@ print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
 print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
 
 from sklearn.ensemble import RandomForestRegressor
+#import logistické regrese
+from sklearn.linear_model import LogisticRegression
 # sestavení regresorů z trénovacích dat
 X = np.array((trenovaci_data['vyska'], trenovaci_data['vaha'])).transpose()
 y = trenovaci_data['bmi']
 # vytvoření a naučení modelu - celá věda je toto
-model = RandomForestRegressor(n_estimators=100, max_depth=8,random_state=0)
+model = LogisticRegression()
 model.fit(X,y)
 # predikce modelu - aplikace
 bmi_hat_trenovaci = model.predict(X)
@@ -126,14 +127,4 @@ mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
 print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
 print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
 
-#optimize randomforest hyperparameters using bayes on testovaci data
-def train_model(n_estimators, max_depth):
-    model = RandomForestRegressor(n_estimators=int(n_estimators), max_depth=int(max_depth), random_state=0)
-    model.fit(X, y)
-    bmi_hat_testovaci = model.predict(np.array((testovaci_data['vyska'], testovaci_data['vaha'])).transpose())
-    mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
-    return -mse_ls_modelu_testovaci
-
-pbounds = {'n_estimators': (100, 300), 'max_depth': (1, 20)}
-optimizer = BayesianOptimization(f=train_model, pbounds=pbounds, random_state=1)
-optimizer.maximize(init_points=5, n_iter=100)
+plt.show()
