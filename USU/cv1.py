@@ -26,4 +26,68 @@ bmi = vaha/(vyska/100)**2
 data = {"vyska": vyska ,"vaha" : vaha, "bmi" : bmi}
 df = pd.DataFrame(data) #
 df.to_csv('data_lide.csv', index = False)
-df.head(10)
+print(df.head(10))
+
+import matplotlib.pyplot as plt
+
+plt.scatter(data['vyska'], data['vaha'], marker = 'x')
+plt.title("Datové body")
+plt.xlabel('výška [m]')
+plt.ylabel('váha [kg]')
+plt.legend()
+plt.show()
+
+promichano_index = df.index.to_list()
+np.random.shuffle(promichano_index)
+
+trenovaci_data_velikost = int(len(df)*0.80) # vezmeme 80 % pro nauceni modelu
+print(df.index[10])
+trenovaci_data = df.filter(promichano_index[:trenovaci_data_velikost], axis = 0) # vem nahodne indexy
+testovaci_data = df.filter(promichano_index[trenovaci_data_velikost:], axis = 0) # vem nahodne indexy
+
+plt.scatter(trenovaci_data['vyska'], trenovaci_data['vaha'], marker = 'x', label='trénovací')
+plt.scatter(testovaci_data['vyska'], testovaci_data['vaha'], marker = 'o', label='testovací')
+plt.title("Datové body")
+plt.xlabel('výška [m]')
+plt.ylabel('váha [kg]')
+plt.legend()
+plt.show()
+
+# statisticke ukazatele
+print(trenovaci_data.describe())
+print(testovaci_data.describe())
+
+import numpy.linalg as la
+
+#priprava dat pro linearni regresi
+y = trenovaci_data['bmi']
+X_t = np.array((np.ones(y.shape), trenovaci_data['vyska'], trenovaci_data['vaha']))
+X = X_t.transpose()
+
+# sestaveni matice a prave strany
+A = X_t @ X # np.dot(X^T,X)
+b = X_t @ y
+# vypocet koeficientu resenim soustavy lin. rovnic
+koeficienty = la.solve(A,b)
+bmi_hat_trenovaci = X @ koeficienty # vypocet predikce na trenovacich datech
+
+
+X_test_t = np.array(( np.ones(len(testovaci_data)),testovaci_data['vyska'], testovaci_data['vaha']))
+X_test = X_test_t.transpose()
+bmi_hat_testovaci = X_test @ koeficienty
+
+# vykresleni predikce a reality pro trenovaci data
+ax = plt.axes(projection = '3d')
+ax.scatter3D(trenovaci_data['vyska'], trenovaci_data['vaha'], trenovaci_data['bmi'], label = 'realita');
+ax.scatter3D(trenovaci_data['vyska'], trenovaci_data['vaha'], bmi_hat_trenovaci, label = 'predikce');
+ax.legend()
+ax.set_xlabel('výška [m]')
+ax.set_ylabel('váha [kg]')
+ax.set_zlabel('bmi')
+
+# vypocet chyby
+mse_ls_modelu_trenovaci = ((trenovaci_data['bmi']-bmi_hat_trenovaci)**2).mean()
+mse_ls_modelu_testovaci = ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean()
+
+print(f"Chyba na trenovacich datech {mse_ls_modelu_trenovaci}")
+print(f"Chyba na testovacich datech {mse_ls_modelu_testovaci}")
