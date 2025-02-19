@@ -4,6 +4,7 @@ import pandas as pd
 from numpy.random import randn
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from bayes_opt import BayesianOptimization
 
 N = 1000 # počet datových bodů
 
