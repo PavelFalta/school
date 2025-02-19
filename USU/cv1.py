@@ -27,6 +27,9 @@ data = {"vyska": vyska ,"vaha" : vaha, "bmi" : bmi}
 df = pd.DataFrame(data) #
 df.to_csv('data_lide.csv', index = False)
 print(df.head(10))
+df['m^2'] = df['vyska']**2
+df['vaha*vyska'] = df['vyska']*df['vaha']
+df['h^2'] = df['vaha']**2
 
 import matplotlib.pyplot as plt
 
