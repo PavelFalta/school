@@ -108,7 +108,26 @@ from sklearn.pipeline import make_pipeline
 X = np.array((trenovaci_data['vyska'], trenovaci_data['vaha'])).transpose()
 y = trenovaci_data['bmi']
 # vytvoření a naučení modelu - celá věda je toto
-poly_model = make_pipeline(PolynomialFeatures(4), LinearRegression())
+
+best = (0,0)
+
+for i in range(1,10):
+    print(f"Polynomial features + linear regression, polynom {i}")
+    poly_model = make_pipeline(PolynomialFeatures(i), LinearRegression())
+    poly_model.fit(X, y)
+
+    # predikce na trénovacích datech
+    bmi_hat_trenovaci = poly_model.predict(X)
+    # predikce na testovacích datech
+    X_test = np.array((testovaci_data['vyska'], testovaci_data['vaha'])).transpose()
+    bmi_hat_testovaci = poly_model.predict(X_test)
+
+    if best[0] == 0 or best[0] > ((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean():
+        best = (((testovaci_data['bmi']-bmi_hat_testovaci)**2).mean(), i)
+
+
+print(f"Nejlepší model je polynom {best[1]} stupně")
+poly_model = make_pipeline(PolynomialFeatures(best[1]), LinearRegression())
 poly_model.fit(X, y)
 
 # predikce na trénovacích datech
