@@ -1,1 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<prednaska>
+    <nazov>Programovanie v jazyku C</nazov>
+    <prednasajuci>
+        <meno>Ing. Ján Novák</meno>
+    </prednasajuci>
+</prednaska>
