@@ -1,3 +1,5 @@
 # ukonceni
 - zapocet u burleho po vypracovani cviceni
-- zkouska 
+- zkouska u maskova
+- PGP XD
+- XML
