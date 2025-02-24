@@ -83,3 +83,6 @@ https://agilemanifesto.org
 1. studium proveditelnosti
 2. elicitace a analyza pozadavku
 3. specifikace pozadavku (formalni zapis)
+
+#### 2 dokumentace
+- jedna pro programatory a uzivatele
