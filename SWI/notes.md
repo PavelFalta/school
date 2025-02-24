@@ -89,7 +89,23 @@ https://agilemanifesto.org
 
 ### mimo-funkcni pozadavky
 - MFP se rozdeluji na
-1. produktove (kvalita, spolehlivost)
+1. produktove (kvalita, spolehlivost, bezpecnost, efektivita (CPU/RAM))
 2. organizacni (omezeni, operacni systemy/zarizeni, responsibilita, vyvojarske, 2FA...)
 3. externi (zakon, regulace, etika)
 
+
+### co je nejhorsi
+- vsechno tohle predchozi chceme, aby bylo kvantifikovatelne (dukazy)
+- abychom overili, ze jsme splnili mimo-funkcni pozadavky
+
+
+## Berankovo template struktury pozadavku
+1. preface
+2. uvod
+3. glosar
+4. funkcni pozadavky
+5. diagramy 
+6. mimo funkcni pozadavky
+7. evoluce
+8. prilohy
+9. index
