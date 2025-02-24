@@ -63,3 +63,23 @@ https://agilemanifesto.org
 #### extreme programming
 #### scrum
 #### kanban
+
+# 2,
+
+## MPS
+- S -> I -> V -> E
+### inzenyrstvi pozadavku
+- klient nevi co chce
+#### pozadavek
+- atom, objekt se kterym pracujeme. neco, co klient chce od systemu ktery vytvarime
+1. funkcni
+    - co chci
+    - chci aby mi system delal tohle a tohle
+2. mimofunkcni
+    - vlastnosti
+    - efektivity
+
+#### hodne velke meritko
+1. studium proveditelnosti
+2. elicitace a analyza pozadavku
+3. specifikace pozadavku (formalni zapis)
