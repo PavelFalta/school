@@ -86,3 +86,10 @@ https://agilemanifesto.org
 
 #### 2 dokumentace
 - jedna pro programatory a uzivatele
+
+### mimo-funkcni pozadavky
+- MFP se rozdeluji na
+1. produktove (kvalita, spolehlivost)
+2. organizacni (omezeni, operacni systemy/zarizeni, responsibilita, vyvojarske, 2FA...)
+3. externi (zakon, regulace, etika)
+
