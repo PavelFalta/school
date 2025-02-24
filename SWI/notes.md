@@ -109,3 +109,11 @@ https://agilemanifesto.org
 7. evoluce
 8. prilohy
 9. index
+
+### modelovani pozadavku
+
+1. NLP
+2. strukturovany zapis (user stories)
+3. DJS (i*), ve vyvoji zatim
+4. diagramy
+5. matematika
