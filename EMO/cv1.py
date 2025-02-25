@@ -1,4 +1,6 @@
 import random
+from matplotlib import pyplot as plt
+import numpy as np
 
 def kvadraticka_funkce(a, b, c, x):
     return a * x ** 2 + b * x - c # s minusem
@@ -13,5 +15,8 @@ def gama(n, k):
     print("".join(cisla))
 
 
-gama(3, 6)
+t = np.arange(-10, 10, 0.1)
+y = kvadraticka_funkce(1, 1, 1, t)
+plt.plot(t, y)
+plt.show()
 
