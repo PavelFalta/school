@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 def kvadraticka_funkce(x):
-    return x ** 2 + 90*x + 1926 
+    return x ** 2 + 2*x - 10
 
 def gama(s, k):
     bin_len_m = k
@@ -29,7 +29,7 @@ def minf(i_max):
 
 minf(100000)
 
-t = np.linspace(-100, 0, 100)
+t = np.linspace(0, 100, 100)
 plt.plot(t, kvadraticka_funkce(t))
 
 plt.show()
