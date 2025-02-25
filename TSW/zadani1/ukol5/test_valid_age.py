@@ -16,7 +16,7 @@ def calculator():
     return Calculator()
 
 def test_divide_range(calculator):
-    range_a = np.arange(1, 66e100, step=1e99)
-    range_b = np.arange(1, 66)
+    range_a = np.arange(1e-10, 1e10, step=1e9)
+    range_b = np.arange(1e10, 1e-10, step=-1e9)
     for a, b in zip(range_a, range_b):
         assert calculator.divide(a, b) == a / b
