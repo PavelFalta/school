@@ -29,7 +29,7 @@ def minf(i_max):
 
 minf(100000)
 
-t = np.linspace(-20, 20, 100)
+t = np.linspace(-5, 5, 100)
 plt.plot(t, kvadraticka_funkce(t))
 
 plt.show()
