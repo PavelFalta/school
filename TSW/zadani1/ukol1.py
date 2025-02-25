@@ -1,4 +1,4 @@
-from calculator import Calculator
+from TSW.zadani1.calculator import Calculator
 import unittest
 
 
