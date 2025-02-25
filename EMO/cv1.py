@@ -17,17 +17,23 @@ def opak_gama(s, k):
     bin_len_m = k
     cisla = [s[i:i+bin_len_m] for i in range(0, len(s), bin_len_m)]
     cisla = [int(i, 2) for i in cisla]
-    print(cisla)
+    return cisla
 
 def minf(i_max):
     min = float("inf")
 
     for i in range(i_max):
         x = gama(4, 10)
-        print(opak_gama(x, 10))
-        y = kvadraticka_funkce(1, 2, 3, x)
+        der_x = opak_gama(x, 10)
+
+        a = der_x[0]
+        b = der_x[1]
+        c = der_x[2]
+        x = der_x[3]
+
+        y = kvadraticka_funkce(a, b, c, x)
         if y < min:
             min = y
     print(min)
 
-minf(10)
+minf(100)
