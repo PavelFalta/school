@@ -1,5 +1,4 @@
 import random
-from matplotlib import pyplot as plt
 import numpy as np
 
 def kvadraticka_funkce(a, b, c, x):
@@ -12,11 +11,23 @@ def gama(n, k):
     assert bin_len_m <= k, "Nelze zakodovat"
     bin_len_m = max(bin_len_m, k)
     cisla = [bin(i)[2:].zfill(bin_len_m) for i in cisla]
-    print("".join(cisla))
+    return "".join(cisla)
 
+def opak_gama(s, k):
+    bin_len_m = k
+    cisla = [s[i:i+bin_len_m] for i in range(0, len(s), bin_len_m)]
+    cisla = [int(i, 2) for i in cisla]
+    print(cisla)
 
-t = np.arange(-10, 10, 0.1)
-y = kvadraticka_funkce(1, 1, 1, t)
-plt.plot(t, y)
-plt.show()
+def minf(i_max):
+    min = float("inf")
 
+    for i in range(i_max):
+        x = gama(4, 10)
+        print(opak_gama(x, 10))
+        y = kvadraticka_funkce(1, 2, 3, x)
+        if y < min:
+            min = y
+    print(min)
+
+minf(10)
