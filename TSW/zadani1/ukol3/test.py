@@ -19,6 +19,3 @@ def test_divide(calculator):
 
     with pytest.raises(ValueError):
         calculator.divide(1, 0)
-
-if __name__ == "__main__":
-    pytest.main()
