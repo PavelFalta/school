@@ -2,12 +2,12 @@ from calculator import Calculator
 import unittest
 
 
-class TestCalculator(unittest.TestCase): # testovací třída
+class TestCalculator(unittest.TestCase): 
     def setUp(self):
         self.calc = Calculator()
 
-    def test_add(self): # testovací funkce/metoda
-        self.assertEqual(self.calc.add(2, 3), 5) # testovací případ
+    def test_add(self): 
+        self.assertEqual(self.calc.add(2, 3), 5) 
         self.assertEqual(self.calc.add(-1, 1), 0)
 
     def test_subtract(self):
