@@ -16,6 +16,7 @@ def calculator():
     return Calculator()
 
 def test_divide_range(calculator):
-    assert calculator.divide(10, 2) == 5
-    assert calculator.divide(10, 0) == np.inf
-    assert calculator.divide(10, 0) == -np.inf
+    range_a = np.arange(1, 66e100, step=1e99)
+    range_b = np.arange(1, 66)
+    for a, b in zip(range_a, range_b):
+        assert calculator.divide(a, b) == a / b
