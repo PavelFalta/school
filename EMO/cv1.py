@@ -8,9 +8,12 @@ def gama(n, k):
     cisla = [random.randint(1, 100) for _ in range(n)]
     m = max(cisla)
     bin_len_m = len(bin(m)) - 2
+
     assert bin_len_m <= k, "Nelze zakodovat"
+
     bin_len_m = max(bin_len_m, k)
     cisla = [bin(i)[2:].zfill(bin_len_m) for i in cisla]
+    print(cisla)
     return "".join(cisla)
 
 def opak_gama(s, k):
@@ -23,6 +26,7 @@ def minf(i_max):
     min = float("inf")
 
     for i in range(i_max):
+
         x = gama(4, 10)
         der_x = opak_gama(x, 10)
 
