@@ -24,7 +24,7 @@ def minf(i_max):
 
         y = kvadraticka_funkce(gm)
         if y < mn:
-            mn = y
+            mn = gm
     print(mn)
 
 minf(100000)
