@@ -14,19 +14,14 @@ def minf(i_max):
     mn = float("inf")
 
     for i in range(i_max):
-        n = 4
+        n = 1
         k = 10
 
         cisla = "".join([str(random.randint(0, 1)) for _ in range(n*k)])
 
-        der_x = gama(cisla, 10)
+        gm = gama(cisla, 10)[0]
 
-        a = der_x[0]
-        b = der_x[1]
-        c = der_x[2]
-        x = der_x[3]
-
-        y = kvadraticka_funkce(x)
+        y = kvadraticka_funkce(gm)
         if y < mn:
             mn = y
     print(mn)
