@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from matplotlib import pyplot as plt
 
 def kvadraticka_funkce(x):
     return 21 * x ** 2 + 95 * x - 12 # s minusem
@@ -19,11 +20,16 @@ def minf(i_max):
 
         cisla = "".join([str(random.randint(0, 1)) for _ in range(n*k)])
 
-        gm = gama(cisla, 10)[0]
+        gm = int(cisla, 2)
 
         y = kvadraticka_funkce(gm)
         if y < mn:
             mn = y
     print(mn)
 
-minf(1000)
+minf(100000)
+
+t = np.linspace(-20, 20, 100)
+plt.plot(t, kvadraticka_funkce(t))
+
+plt.show()
