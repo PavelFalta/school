@@ -13,4 +13,4 @@ def gama(tn):
     return int(tn, 2)
 
 
-print(blind_algo(100000))
+print(blind_algo(1000000))
