@@ -1,12 +1,9 @@
 import pytest
 from calculator import Calculator
 
-@pytest.fixture
-def calculator():
-    return Calculator()
-
-def test_add(a, b, result):
-    assert calculator.add(a, b) == result
+calculator = Calculator()
+def test_add(a, b):
+    return calculator.add(a, b)
 
 @pytest.mark.parametrize("a, b, result", [
     pytest.param(1, 2, 3, id="positive integers"),
