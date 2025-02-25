@@ -1,18 +1,8 @@
 import random
 import numpy as np
 
-def kvadraticka_funkce(a, b, c, x):
-    return a * x ** 2 + b * x - c # s minusem
-
-def binary_kod(cisla, k):
-    m = max(cisla)
-    bin_len_m = len(bin(m)) - 2
-
-    assert bin_len_m <= k, "Nelze zakodovat"
-
-    bin_len_m = max(bin_len_m, k)
-    cisla = [bin(i)[2:].zfill(bin_len_m) for i in cisla]
-    return "".join(cisla)
+def kvadraticka_funkce(x):
+    return 21 * x ** 2 + 95 * x - 12 # s minusem
 
 def gama(s, k):
     bin_len_m = k
@@ -36,7 +26,7 @@ def minf(i_max):
         c = der_x[2]
         x = der_x[3]
 
-        y = kvadraticka_funkce(a, b, c, x)
+        y = kvadraticka_funkce(x)
         if y < mn:
             mn = y
     print(mn)
