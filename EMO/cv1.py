@@ -21,14 +21,15 @@ def gama(s, k):
     return cisla
 
 def minf(i_max):
-    min = float("inf")
+    mn = float("inf")
 
     for i in range(i_max):
+        n = 4
+        k = 10
 
-        cisla = [random.randint(1, 100) for _ in range(4)]
+        cisla = "".join([str(random.randint(0, 1)) for _ in range(n*k)])
 
-        x = binary_kod(cisla, 10)
-        der_x = gama(x, 10)
+        der_x = gama(cisla, 10)
 
         a = der_x[0]
         b = der_x[1]
@@ -36,8 +37,8 @@ def minf(i_max):
         x = der_x[3]
 
         y = kvadraticka_funkce(a, b, c, x)
-        if y < min:
-            min = y
-    print(min)
+        if y < mn:
+            mn = y
+    print(mn)
 
-minf(100)
+minf(1000)
