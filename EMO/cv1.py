@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 def kvadraticka_funkce(x):
-    return 21 * x ** 2 + 95 * x - 12 # s minusem
+    return 3 * x ** 2 + 2 * x - 1 # s minusem
 
 def gama(s, k):
     bin_len_m = k
@@ -24,7 +24,7 @@ def minf(i_max):
 
         y = kvadraticka_funkce(gm)
         if y < mn:
-            mn = gm
+            mn = y
     print(mn)
 
 minf(100000)
