@@ -37,14 +37,17 @@ def k_means(data, clusters):
             converged = True
     
     
-        plt.scatter(data[:, 0], data[:, 1], c=labels)
-        plt.scatter(centroids[:, 0], centroids[:, 1], c='red')
-        plt.show()
+        # plt.scatter(data[:, 0], data[:, 1], c=labels)
+        # plt.scatter(centroids[:, 0], centroids[:, 1], c='red')
+        # plt.show()
 
         history_centroids.append(centroids)
     
+    #plot the data and history of centroids in one plot
     plt.scatter(data[:, 0], data[:, 1], c=labels)
-    plt.plot(history_centroids)
+    history_centroids = np.array(history_centroids)
+    for i in range(clusters):
+        plt.plot(history_centroids[:, i, 0], history_centroids[:, i, 1], 'r--')
     plt.show()
     
     return centroids, labels
