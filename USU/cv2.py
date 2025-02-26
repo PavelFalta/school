@@ -19,11 +19,8 @@ def k_means(data, clusters):
 
     curr_cent = centroids.popleft()
 
-    for i in range(len(data)):
-        # use numpy to search for the closest point to current centroid
-        closest = data[0], float('inf')
-        for point in data:
-            if distance(curr_cent, point) < closest[1]:
-                closest = point, distance(curr_cent, point)
+    plt.plot(curr_cent, 'ro')
+    plt.scatter(data[:, 0], data[:, 1], c=labels)
+    plt.show()
     
-k_means(y, 5)
+k_means(X, 5)
