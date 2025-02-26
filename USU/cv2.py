@@ -14,7 +14,10 @@ def distance(p1, p2):
     return np.sqrt(np.sum((p1 - p2) ** 2))
 
 def k_means(data, clusters):
-    centroids = deque(data[np.random.choice(range(len(data)), clusters)])
+
+    # Initialize centroids with random points from data
+    indices = np.random.choice(len(data), clusters, replace=False)
+    centroids = deque([data[i] for i in indices])
     print(centroids)
     labels = np.zeros(len(data))
 
