@@ -1,4 +1,4 @@
-# k-means from sratch
+
 from sklearn.datasets import make_blobs
 import numpy as np
 from matplotlib import pyplot as plt
@@ -7,7 +7,7 @@ from collections import deque
 X, y = make_blobs(n_samples=1000, centers=5, n_features=2, random_state=0)
 
 plt.scatter(X[:, 0], X[:, 1], c=y)
-# plt.show()
+
 
 
 def distance(p1, p2):
@@ -15,29 +15,36 @@ def distance(p1, p2):
 
 def k_means(data, clusters):
 
-    # Initialize centroids with random points from data
-    indices = np.random.choice(len(data), clusters, replace=False)
-    centroids = deque([data[i] for i in indices])
+    centroids = data[np.random.choice(len(data), clusters, replace=False)]
     
     labels = np.zeros(len(data))
-
-    curr_cent = centroids.popleft()
-
-    smallest = distance(data[0], curr_cent)
-
-    data = deque(data)
-
-    while data:
-        i = data.popleft()
-
-        dist = distance(i, curr_cent)
-
-        if dist < smallest:
-            smallest = dist
-            labels[i] = curr_cent
+    converged = False
     
-    plt.scatter(X[:, 0], X[:, 1], c=labels)
+    while not converged:
+        
+        old_labels = labels.copy()
+        for i, point in enumerate(data):
+            
+            distances = [distance(point, centroid) for centroid in centroids]
+            labels[i] = np.argmin(distances)
+        
+        
+        for j in range(clusters):
+            if len(data[labels == j]) > 0:  
+                centroids[j] = np.mean(data[labels == j], axis=0)
+        
+        
+        if np.array_equal(labels, old_labels):
+            converged = True
+    
+    
+    plt.figure(figsize=(10, 7))
+    plt.scatter(data[:, 0], data[:, 1], c=labels)
+    plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='x', s=200)
+    plt.title(f'K-means with {clusters} clusters')
     plt.show()
+    
+    return centroids, labels
 
     
 k_means(X, 5)
