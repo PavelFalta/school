@@ -15,6 +15,9 @@ def k_means(data, clusters):
     
     labels = np.zeros(len(data))
     converged = False
+
+    history_centroids = []
+    history_centroids.append(centroids)
     
     while not converged:
         
@@ -37,6 +40,12 @@ def k_means(data, clusters):
         plt.scatter(data[:, 0], data[:, 1], c=labels)
         plt.scatter(centroids[:, 0], centroids[:, 1], c='red')
         plt.show()
+
+        history_centroids.append(centroids)
+    
+    plt.scatter(data[:, 0], data[:, 1], c=labels)
+    plt.plot(history_centroids)
+    plt.show()
     
     return centroids, labels
 
