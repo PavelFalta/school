@@ -11,7 +11,7 @@ def distance(p1, p2):
 
 def k_means(data, clusters):
 
-    centroids = data[np.random.choice(len(data), clusters, replace=False)]
+    centroids = [data[i] for i in range(clusters)]
     
     labels = np.zeros(len(data))
 
