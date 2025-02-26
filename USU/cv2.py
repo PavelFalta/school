@@ -15,12 +15,16 @@ def distance(p1, p2):
 
 def k_means(data, clusters):
     centroids = deque(data[np.random.choice(range(len(data)), clusters)])
+    print(centroids)
     labels = np.zeros(len(data))
 
     curr_cent = centroids.popleft()
 
-    plt.plot(curr_cent, 'ro')
-    plt.scatter(data[:, 0], data[:, 1], c=labels)
-    plt.show()
+    # plt.plot(curr_cent, 'ro')
+    # plt.scatter(data[:, 0], data[:, 1], c=labels)
+    # plt.show()
+    for i in range(len(data)):
+        distances = [distance(data[i], c) for c in centroids]
+        labels[i] = np.argmin(distances)
     
 k_means(X, 5)
