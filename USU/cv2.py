@@ -34,13 +34,13 @@ def k_means(data, clusters):
             converged = True
     
     
-    plt.figure(figsize=(10, 7))
-    plt.scatter(data[:, 0], data[:, 1], c=labels)
-    plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='x', s=200)
-    plt.title(f'K-means with {clusters} clusters')
-    plt.show()
+        plt.figure(figsize=(10, 7))
+        plt.scatter(data[:, 0], data[:, 1], c=labels)
+        plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='x', s=200)
+        plt.title(f'K-means with {clusters} clusters')
+        plt.show()
     
     return centroids, labels
 
     
-k_means(X, 1)
+k_means(X, 2)
