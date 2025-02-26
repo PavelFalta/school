@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from collections import deque
 
-X, y = make_blobs(n_samples=1000, centers=5, n_features=2, random_state=0)
+X, y = make_blobs(n_samples=10000, centers=12, n_features=2, random_state=0)
 
 def distance(p1, p2):
     return np.sqrt(np.sum((p1 - p2) ** 2))
@@ -12,7 +12,7 @@ def distance(p1, p2):
 def k_means(data, clusters):
 
     centroids = data[np.random.choice(range(len(data)), clusters, replace=False)]
-    
+
     labels = np.zeros(len(data))
 
     old_labels = np.eye(len(data))
@@ -33,7 +33,7 @@ def k_means(data, clusters):
     return centroids, labels
 
     
-centroids, labels = k_means(X, 2)
+centroids, labels = k_means(X, 12)
 
 plt.scatter(X[:, 0], X[:, 1], c=labels)
 plt.scatter(centroids[:, 0], centroids[:, 1], c='red', s=100)
