@@ -7,7 +7,7 @@ from collections import deque
 X, y = make_blobs(n_samples=1000, centers=5, n_features=2, random_state=0)
 
 plt.scatter(X[:, 0], X[:, 1], c=y)
-plt.show()
+# plt.show()
 
 
 def distance(p1, p2):
@@ -24,6 +24,6 @@ def k_means(data, clusters):
         closest = data[0], float('inf')
         for point in data:
             if distance(curr_cent, point) < closest[1]:
-                closest = point
+                closest = point, distance(curr_cent, point)
     
 k_means(y, 5)
