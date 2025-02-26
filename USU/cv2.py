@@ -15,7 +15,7 @@ def k_means(data, clusters):
 
     labels = np.zeros(len(data))
 
-    old_labels = np.eye(len(data))
+    old_labels = np.eye(len(data), dtype=int)
 
     while not np.all(labels == old_labels):
         
