@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 def kvadraticka_funkce(x):
-    return x ** 2 + 2*x - 10
+    return (x - 20) ** 2 + (x - 20) - 10
 
 def gama(s, k):
     bin_len_m = k
