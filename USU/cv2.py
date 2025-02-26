@@ -18,16 +18,26 @@ def k_means(data, clusters):
     # Initialize centroids with random points from data
     indices = np.random.choice(len(data), clusters, replace=False)
     centroids = deque([data[i] for i in indices])
-    print(centroids)
+    
     labels = np.zeros(len(data))
 
     curr_cent = centroids.popleft()
 
-    # plt.plot(curr_cent, 'ro')
-    # plt.scatter(data[:, 0], data[:, 1], c=labels)
-    # plt.show()
-    for i in range(len(data)):
-        distances = [distance(data[i], c) for c in centroids]
-        labels[i] = np.argmin(distances)
+    smallest = distance(data[0], curr_cent)
+
+    data = deque(data)
+
+    while data:
+        i = data.popleft()
+
+        dist = distance(i, curr_cent)
+
+        if dist < smallest:
+            smallest = dist
+            labels[i] = curr_cent
+    
+    plt.scatter(X[:, 0], X[:, 1], c=labels)
+    plt.show()
+
     
 k_means(X, 5)
