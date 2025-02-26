@@ -10,27 +10,35 @@ def distance(p1, p2):
     return np.sqrt(np.sum((p1 - p2) ** 2))
 
 def k_means(data, clusters):
-
+    
     centroids = data[np.random.choice(len(data), clusters, replace=False)]
+    
     
     labels = np.zeros(len(data))
     converged = False
     
+    
+    prev_labels = deque([None], maxlen=1)
+    prev_labels.append(labels.copy())
+    
     while not converged:
         
-        old_labels = labels.copy()
+        current_labels = labels.copy()
 
+        
         for i, point in enumerate(data):
-            distances = [distance(point, centroid) for centroid in centroids]
+            distances = deque([distance(point, centroid) for centroid in centroids])
             labels[i] = np.argmin(distances)
         
         
         for j in range(clusters):
-            if len(data[labels == j]) > 0:  
-                centroids[j] = np.mean(data[labels == j], axis=0)
+            cluster_points = deque(data[labels == j])
+            if len(cluster_points) > 0:
+                centroids[j] = np.mean(list(cluster_points), axis=0)
         
         
-        if np.array_equal(labels, old_labels):
+        prev_labels.append(labels.copy())
+        if np.array_equal(prev_labels[0], current_labels):
             converged = True
     
     
