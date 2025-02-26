@@ -25,17 +25,16 @@ def k_means(data, clusters):
             distances = [distance(point, centroid) for centroid in centroids]
             labels[i] = np.argmin(distances)
         
-        
         for j in range(clusters):
-            if len(data[labels == j]) > 0:  
-                centroids[j] = np.mean(data[labels == j], axis=0)
-    
-    
-    plt.scatter(data[:, 0], data[:, 1], c=labels)
-    plt.scatter(centroids[:, 0], centroids[:, 1], c='red')
-    plt.show()
+            points_in_cluster = [data[i] for i in range(len(data)) if labels[i] == j]
+            if points_in_cluster:  
+                centroids[j] = np.mean(points_in_cluster, axis=0)
     
     return centroids, labels
 
     
-k_means(X, 2)
+centroids, labels = k_means(X, 2)
+
+plt.scatter(X[:, 0], X[:, 1], c=labels)
+plt.scatter(centroids[:, 0], centroids[:, 1], c='red', s=100)
+plt.show()
