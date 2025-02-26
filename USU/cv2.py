@@ -14,12 +14,10 @@ def k_means(data, clusters):
     centroids = data[np.random.choice(len(data), clusters, replace=False)]
     
     labels = np.zeros(len(data))
-    converged = False
 
-    history_centroids = []
-    history_centroids.append(centroids)
-    
-    while not converged:
+    old_labels = np.eye(len(data))
+
+    while not np.all(labels == old_labels):
         
         old_labels = labels.copy()
 
@@ -31,23 +29,10 @@ def k_means(data, clusters):
         for j in range(clusters):
             if len(data[labels == j]) > 0:  
                 centroids[j] = np.mean(data[labels == j], axis=0)
-        
-        
-        if np.array_equal(labels, old_labels):
-            converged = True
     
     
-        # plt.scatter(data[:, 0], data[:, 1], c=labels)
-        # plt.scatter(centroids[:, 0], centroids[:, 1], c='red')
-        # plt.show()
-
-        history_centroids.append(centroids)
-    
-    #plot the data and history of centroids in one plot
     plt.scatter(data[:, 0], data[:, 1], c=labels)
-    history_centroids = np.array(history_centroids)
-    for i in range(clusters):
-        plt.plot(history_centroids[:, i, 0], history_centroids[:, i, 1], 'r--')
+    plt.scatter(centroids[:, 0], centroids[:, 1], c='red')
     plt.show()
     
     return centroids, labels
