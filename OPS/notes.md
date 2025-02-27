@@ -1,2 +1,3 @@
 # OPS
-## basic af
+# zakonceni
+- napsat skript podle mr balinna
