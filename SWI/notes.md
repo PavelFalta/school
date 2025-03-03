@@ -148,4 +148,12 @@ https://agilemanifesto.org
 1. **DDM** = data driven modelling (1970...)
     - data-flow diagram
 2. **EDM** = event-driven modelling
+    - stavove diagramy
 3. **MDE** = modely rizene inzenyrstvi
+    - dulezite je model, az druhotne kod
+    - vyvojar by tedy mel produkovat graficke modely
+    - vzniklo MDA od OMG
+    - 3 casti MDA:
+        1. cim
+        2. pim
+        3. psm
