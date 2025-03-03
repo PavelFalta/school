@@ -154,6 +154,7 @@ https://agilemanifesto.org
     - vyvojar by tedy mel produkovat graficke modely
     - vzniklo MDA od OMG
     - 3 casti MDA:
-        1. cim
-        2. pim
-        3. psm
+        1. CIM
+        2. PIM
+        3. PSM
+    - revival pomoci LLM?
