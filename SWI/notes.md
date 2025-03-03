@@ -117,3 +117,11 @@ https://agilemanifesto.org
 3. DJS (i*), ve vyvoji zatim
 4. diagramy
 5. matematika
+
+# 3,
+- systemove modelovani
+
+## k cemu?
+
+
+## typy
