@@ -131,6 +131,13 @@ https://agilemanifesto.org
 
 ## typy
 1. externi
+    - kontextovy
 2. interakcni
+    - use-case
 3. strukturalni
 4. behavioralni
+
+### nejdulezitejsi podle beranka
+1. use case diagram pro vyjadreni interakce uzivatele se systemem
+2. sekvencni pro vyjadreni chovani vevnitr
+3. class diagram
