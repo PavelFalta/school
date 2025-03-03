@@ -123,11 +123,14 @@ https://agilemanifesto.org
 
 ## k cemu?
 1. vyjednavani R
-2. 
+2. dokonceni sw arch
 3. voditko pro programatory
-4.
-5.
+4. voditko pro testing
+5. voditko pro evoluci
 6. voditko pro rizeni
 
-
 ## typy
+1. externi
+2. interakcni
+3. strukturalni
+4. behavioralni
