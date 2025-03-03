@@ -137,7 +137,7 @@ https://agilemanifesto.org
 3. strukturalni
 4. behavioralni
 
-### nejdulezitejsi podle beranka
-1. use case diagram pro vyjadreni interakce uzivatele se systemem
-2. sekvencni pro vyjadreni chovani vevnitr
-3. class diagram
+### nejdulezitejsi podle berankovo clanku/pruzkumu
+1. use case diagram **pro vyjadreni interakce uzivatele se systemem**
+2. sekvencni **pro vyjadreni chovani vevnitr**
+3. class diagram **pro vyjadreni struktury**
