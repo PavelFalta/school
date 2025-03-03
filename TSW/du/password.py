@@ -38,9 +38,11 @@ def lower_check(password:str, minfreq:int):
     
 
 def is_valid_password(password:str) -> bool:
-    if all([len_check(password, 8), 
-            numeric_check(password, 1), 
-            upper_check(password, 1),
-            lower_check(password, 1)]):
+
+    if all([len_check(password, minlen=8), 
+            numeric_check(password, minfreq=1), 
+            upper_check(password, minfreq=1),
+            lower_check(password, minfreq=1)]):
+        
         return True
     return False
