@@ -133,11 +133,13 @@ https://agilemanifesto.org
 1. externi
     - kontextovy
 2. interakcni
-    - use-case
+    - use-case, sekvencni
 3. strukturalni
+    - class diagram
 4. behavioralni
+    - aktivity, stavy
 
 ### nejdulezitejsi podle berankovo clanku/pruzkumu
-1. use case diagram **pro vyjadreni interakce uzivatele se systemem**
-2. sekvencni **pro vyjadreni chovani vevnitr**
-3. class diagram **pro vyjadreni struktury**
+1. **use case diagram** pro vyjadreni interakce uzivatele se systemem
+2. **sekvencni** pro vyjadreni chovani vevnitr
+3. **class diagram** pro vyjadreni struktury
