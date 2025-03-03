@@ -2,13 +2,11 @@ from password import is_valid_password
 import pytest
 
 @pytest.fixture
-def is_valid_password():
-    return is_valid_password()
-
+def valid_password_checker():
+    return is_valid_password
 
 @pytest.mark.parametrize("password, result", [
     pytest.param("Aa123456789", True, id="valid password"),
-
 ])
-def test_add(is_valid_password, password, result):
-    assert is_valid_password(password) == result
+def test_add(valid_password_checker, password, result):
+    assert valid_password_checker(password) == result
