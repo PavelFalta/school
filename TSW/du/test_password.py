@@ -2,7 +2,7 @@ from password import is_valid_password
 import pytest
 
 @pytest.fixture
-def fixture():
+def is_valid_password():
     return is_valid_password()
 
 
