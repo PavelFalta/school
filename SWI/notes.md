@@ -143,3 +143,9 @@ https://agilemanifesto.org
 1. **use case diagram** pro vyjadreni interakce uzivatele se systemem
 2. **sekvencni** pro vyjadreni chovani vevnitr
 3. **class diagram** pro vyjadreni struktury
+
+## teorie modelovani (podle beranka)
+1. **DDM** = data driven modelling (1970...)
+    - data-flow diagram
+2. **EDM** = event-driven modelling
+3. **MDE** = modely rizene inzenyrstvi
