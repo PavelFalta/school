@@ -122,6 +122,12 @@ https://agilemanifesto.org
 - systemove modelovani
 
 ## k cemu?
+1. vyjednavani R
+2. 
+3. voditko pro programatory
+4.
+5.
+6. voditko pro rizeni
 
 
 ## typy
