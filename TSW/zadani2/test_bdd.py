@@ -1,11 +1,9 @@
 import pytest
-from pytest_bdd import scenarios, given, when, then
+from pytest_bdd import scenarios, given, when, then, parsers
 from cv3 import BankAccount
-# Načtení scénářů
 
-
+# Load scenarios
 scenarios('bank_account.feature')
-
 
 @pytest.fixture
 def account():
@@ -13,24 +11,20 @@ def account():
 
 @given('nový bankovní účet')
 def new_account():
-    pass #již realizováno pomocí fixture
-    
-@when('vložím 200 Kč')
-def deposit_money(account):
-    account.deposit(200)
+    pass  # Already implemented using fixture
 
-@then('zůstatek je 200 Kč')
-def check_balance_200(account):
-    assert account.get_balance() == 200
+@given(parsers.parse('bankovní účet s {amount:d} Kč'))
+def add_amount(account, amount):
+    account.deposit(amount)
 
-@given('bankovní účet s 200 Kč')
-def add_200(account):
-    account.deposit(200)
+@when(parsers.parse('vložím {amount:d} Kč'))
+def deposit_money(account, amount):
+    account.deposit(amount)
 
-@when('vyberu 100 Kč')
-def withdraw_100(account):
-    account.withdraw(100)
+@when(parsers.parse('vyberu {amount:d} Kč'))
+def withdraw_money(account, amount):
+    account.withdraw(amount)
 
-@then('zůstatek je 100 Kč')
-def check_balance_100(account):
-    assert account.get_balance() == 100
+@then(parsers.parse('zůstatek je {amount:d} Kč'))
+def check_balance(account, amount):
+    assert account.get_balance() == amount
