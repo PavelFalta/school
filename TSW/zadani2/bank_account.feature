@@ -8,4 +8,4 @@ Feature: Bank Account
     Scenario: Výběr peněz
         Given bankovní účet s 200 Kč
         When vyberu 100 Kč
-        then zůstatek je 100 Kč
+        Then zůstatek je 100 Kč
