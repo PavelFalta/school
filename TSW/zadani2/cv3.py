@@ -6,3 +6,16 @@ class Kalkulacka:
         return np.prod(np.array(args))
 
 
+class BankAccount:
+    def __init__(self):
+        ...
+
+    def deposit(self, amount):
+        ...
+    
+    def withdraw(self, amount):
+        ...
+    
+    def get_balance(self):
+        ...
+    
