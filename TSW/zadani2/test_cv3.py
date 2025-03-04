@@ -1,12 +1,13 @@
 from cv3 import Kalkulacka
 
 def test_multiply(calc):
-    a, expected = [1,2,3], 6
-    outcome = calc.multiply(a)
+    a, b, c, d, expected = 1, 2, 6, 3, 36
+
+    outcome = calc.multiply(a, b, c, d)
+
     assert outcome == expected
 
 
 calc = Kalkulacka()
-
 
 test_multiply(calc)
