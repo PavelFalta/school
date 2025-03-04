@@ -1,7 +1,7 @@
 from cv3 import Kalkulacka
 
 def test_multiply(calc):
-    a, b, c, d, expected = 1, 2, 6, 3, 36
+    a, b, c, d, expected = float('inf'), 2, 6, 3, float('inf')
 
     outcome = calc.multiply(a, b, c, d)
 
