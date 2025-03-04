@@ -1,7 +1,10 @@
 from cv3 import BankAccount
 import pytest
 
-account = BankAccount()
+
+@pytest.fixture
+def acc():
+    return BankAccount()
 
 def test_deposit(acc):
     amount = 100
