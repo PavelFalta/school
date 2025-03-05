@@ -20,9 +20,12 @@ class naivni_logisticka_regrese_binarni:
 
   def kriterialni_funkce(self, w):
     """
-    Minimalizovana funkce
+    Minimalizovana funkce - Cross Entropy
     """
-    return la.norm(self._y-self.sigmoida(w, self._X))
+    m = self._X.shape[0]
+    h = self.sigmoida(w, self._X)
+    epsilon = 1e-5  # to avoid log(0)
+    return -1/m * np.sum(self._y * np.log(h + epsilon) + (1 - self._y) * np.log(1 - h + epsilon))
 
 
   def fit(self, X,y):
