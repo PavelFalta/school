@@ -24,8 +24,8 @@ class naivni_logisticka_regrese_binarni:
     """
     m = self._X.shape[0]
     h = self.sigmoida(w, self._X)
-    epsilon = 1e-5  # to avoid log(0)
-    return -1/m * np.sum(self._y * np.log(h + epsilon) + (1 - self._y) * np.log(1 - h + epsilon))
+
+    return -1/m * np.sum(self._y * np.log(h) + (1 - self._y) * np.log(1 - h))
 
 
   def fit(self, X,y):
@@ -63,7 +63,7 @@ class naivni_logisticka_regrese_binarni:
     return  1* (pravdepodobnost > hranice)
 
 if __name__ == "__main__":
-    X, y = make_blobs(n_samples=100, centers=[(2.5,2.5),(-2.5,-2.5)], cluster_std=2.5, n_features=2, random_state=42)
+    X, y = make_blobs(n_samples=100, centers=[(2.5,2.5),(-2.5,-2.5)], n_features=2, random_state=42)
 
     min1,max1 = X[:,0].min(),X[:,0].max()
     min2,max2 = X[:,1].min(),X[:,1].max()
