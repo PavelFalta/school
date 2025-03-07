@@ -1,0 +1,16 @@
+<!ELEMENT school (student*, teacher*)>
+
+<!ELEMENT student (name, age, grade)>
+<!ATTLIST student
+    id ID #REQUIRED
+    enrolled CDATA #IMPLIED>
+
+<!ELEMENT teacher (name, subject)>
+<!ATTLIST teacher
+    id ID #REQUIRED
+    department CDATA #IMPLIED>
+
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT age (#PCDATA)>
+<!ELEMENT grade (#PCDATA)>
+<!ELEMENT subject (#PCDATA)>
