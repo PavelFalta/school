@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE school [
+    <!ELEMENT school (student+)>
+    <!ELEMENT student (name, age, grade)>
+    <!ELEMENT name (#PCDATA)>
+    <!ELEMENT age (#PCDATA)>
+    <!ELEMENT grade (#PCDATA)>
+]>
+<school>
+    <student>
+        <name>John Doe</name>
+        <age>16</age>
+        <grade>10</grade>
+    </student>
+    <student>
+        <name>Jane Smith</name>
+        <age>17</age>
+        <grade>11</grade>
+    </student>
+</school>
