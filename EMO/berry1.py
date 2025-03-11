@@ -20,5 +20,7 @@ while parent != target:
     new_parent = min(children, key=fitness)
     if fitness(new_parent) < fitness(parent):
         parent = new_parent
-    print(f"{igen} gen: {''.join(parent)}")
+        print(f"{igen} gen: {''.join(parent)}")
+    else:
+        print(f"{igen} gen: poor children")
     igen += 1
