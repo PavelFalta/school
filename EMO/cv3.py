@@ -32,9 +32,18 @@ def tabu_search(f, tmax, k, n, maxlen):
 
     for t in range(tmax):
         alpha = random_alpha(size=k*n)
-        S = [i for i in range(k*n)]
+        S = [i for i in range(k*n) if not i in tabu]
+        _U = U(alpha, S)
         
-        #print(f"t: {time}, alpha: {alpha}, x: {x}, f(x): {f_x}, f_min: {f_min}")
+        alpha_min = min(_U, key=lambda x: f(gamma(x, k, n)))
+
+        current_f = f(gamma(alpha_min, k, n))
+        if current_f < f_min:
+            f_min = current_f
+
+        tabu.append(alpha_min)
+
+        print(f"t: {time}, alpha: {alpha}, x: {x}, f(x): {f_x}, f_min: {f_min}")
     return (alpha_min, f_min)
 
 tabu_search(f = lambda x: -x[0]**2 + 6, tmax = 30, k = 4, n = 5,maxlen=10)
