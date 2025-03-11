@@ -1,5 +1,6 @@
 import requests
 import random
+from datetime import datetime
 
 
 class WeatherService:
@@ -20,6 +21,11 @@ class WeatherService:
         random.seed(ones_count)
 
         temperature = random.uniform(5, 25)
+
+        current_time = datetime.now()
+        minutes = current_time.minute
+        delta = minutes / 10
+        temperature -= delta
 
         return {
             'coord': {'lon': random.uniform(-180, 180), 'lat': random.uniform(-90, 90)},
