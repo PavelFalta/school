@@ -5,7 +5,7 @@ target  = list("you should try coding and writing print('hello world') its not t
 alphabet = string.ascii_lowercase + " " + "'" + "(" + ")"
  
 pmut = 0.05
-nchildren = 100
+nchildren = 1000
  
 def fitness(trial):
     return sum(t != h for t,h in zip(trial, target))
