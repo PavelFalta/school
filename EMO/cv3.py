@@ -44,8 +44,9 @@ def tabu_search(f, tmax, k, n, maxlen):
         if current_f < f_min:
             f_min = current_f
 
-        tabu.append(alpha_min)
-
+        # Append the best i to tabu
+        best_i = S[_U.index(alpha_min)]
+        tabu.append(best_i)
 
         print(f"t: {t}, alpha: {alpha_min}, x: {x}, f(x): {current_f}, f_min: {f_min}, tabu: {tabu}")
     return (alpha_min, f_min)
