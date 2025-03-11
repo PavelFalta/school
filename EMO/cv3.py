@@ -2,20 +2,10 @@ from collections import deque
 from random import randint
 import random
 
-def negace(gen, i):
-    gen = list(gen)
-    gen[i] = 1 - int(gen[i])
-    return gen
-
-def U(alpha, S):
-    return [negace(alpha, i) for i in S]
-
 def random_alpha(size):
     return ''.join(random.choice('01') for _ in range(size))
-
 def gamma(alpha, k, n):
     return [gray_dec(alpha[i*k:(i+1)*k]) for i in range(n)]
-
 def gray_dec(alpha):
     
     binary = int(alpha[0])
@@ -24,6 +14,14 @@ def gray_dec(alpha):
         binary ^= int(bit)
         result = (result << 1) | binary
     return result
+
+def negace(gen, i):
+    gen = list(gen)
+    gen[i] = 1 - int(gen[i])
+    return gen
+
+def U(alpha, S):
+    return [negace(alpha, i) for i in S]
 
 def tabu_search(f, tmax, k, n, maxlen):
     f_min = float("inf")
