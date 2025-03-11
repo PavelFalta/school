@@ -19,10 +19,10 @@ def hill_climb(f, tmax, k, n, c0, pmut):
 
 # Funkce pro mutaci
 def mutation(alfa, pmut):
-    child = "" 
+    child = [] 
     for i in range(len(alfa)):
-        child += str(1 + int(alfa[i]) * -1) if random.random() < pmut else alfa[i]
-    return child
+        child.append(str(1 + int(alfa[i]) * -1) if random.random() < pmut else alfa[i])
+    return "".join(child)
 
 # Funkce pro generování náhodného alfa
 def random_alpha(size):
