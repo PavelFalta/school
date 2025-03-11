@@ -6,8 +6,8 @@ def negace(gen, i):
     gen[i] = 1 - gen[i]
     return gen
 
-def U(alpha, S):
-    return [negace(i, randint(0, len(i))) for i in S]
+def U(alpha, S, T):
+    return [S(alpha) for i in S if i not in T]
 
 gen = [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
 gen = negace(gen, 3)
