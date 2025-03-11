@@ -1,9 +1,10 @@
 from collections import deque
 from random import randint
-from random import random
+import random
 
 def negace(gen, i):
-    gen[i] = 1 - gen[i]
+    gen = list(gen)
+    gen[i] = 1 - int(gen[i])
     return gen
 
 def U(alpha, S, tabu):
@@ -29,9 +30,8 @@ def tabu_search(f, tmax, k, n, c0, pmut, S, T):
     alpha_min = None
     alpha = random_alpha(size=k*n)
     tabu = deque(maxlen=T)
-    for time in range(tmax):
+    for t in range(tmax):
         U_ = U(alpha, S, tabu)
-        U_ = [mutation(alpha, pmut) for i in range(c0)]
         alpha = min(U_, key=lambda x: f(gamma(x, k, n)))
         x = gamma(alpha, k, n)
         f_x = f(x)
@@ -39,5 +39,8 @@ def tabu_search(f, tmax, k, n, c0, pmut, S, T):
             f_min = f_x
             alpha_min = alpha
         tabu.append(alpha)
-        print(f"t: {time}, alpha: {alpha}, x: {x}, f(x): {f_x}, f_min: {f_min}")
+        print(tabu)
+        #print(f"t: {time}, alpha: {alpha}, x: {x}, f(x): {f_x}, f_min: {f_min}")
     return (alpha_min, f_min)
+
+tabu_search(f = lambda x: -x[0]**2 + 6, tmax = 30, k = 4, n = 1, c0=10, pmut=0.1, S=[0, 1, 2, 3], T=10)
