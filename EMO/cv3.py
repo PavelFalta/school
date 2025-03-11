@@ -25,16 +25,16 @@ def gray_dec(alpha):
         result = (result << 1) | binary
     return result
 
-def tabu_search(f, tmax, k, n, c0, pmut, S, T):
+def tabu_search(f, tmax, k, n, c0, pmut, S, maxlen):
     f_min = float("inf")
     alpha_min = None
-    tabu = deque(maxlen=T)
+    tabu = deque(maxlen=maxlen)
 
     for t in range(tmax):
         alpha = random_alpha(size=k*n)
-        print(gamma(alpha, k,n))
+        print(alpha)
         
         #print(f"t: {time}, alpha: {alpha}, x: {x}, f(x): {f_x}, f_min: {f_min}")
     return (alpha_min, f_min)
 
-tabu_search(f = lambda x: -x[0]**2 + 6, tmax = 30, k = 4, n = 5, c0=10, pmut=0.1, S=[0, 1, 2, 3], T=10)
+tabu_search(f = lambda x: -x[0]**2 + 6, tmax = 30, k = 4, n = 5, c0=10, pmut=0.1, S=[0, 1, 2, 3], maxlen=10)
