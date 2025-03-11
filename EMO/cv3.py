@@ -37,13 +37,17 @@ def tabu_search(f, tmax, k, n, maxlen):
         
         alpha_min = min(_U, key=lambda x: f(gamma(x, k, n)))
 
-        current_f = f(gamma(alpha_min, k, n))
+        x = gamma(alpha_min, k, n)
+
+        current_f = f(x)
+
         if current_f < f_min:
             f_min = current_f
 
         tabu.append(alpha_min)
 
-        print(f"t: {time}, alpha: {alpha}, x: {x}, f(x): {f_x}, f_min: {f_min}")
+
+        print(f"t: {t}, alpha: {alpha_min}, x: {x}, f(x): {current_f}, f_min: {f_min}, tabu: {tabu}")
     return (alpha_min, f_min)
 
 tabu_search(f = lambda x: -x[0]**2 + 6, tmax = 30, k = 4, n = 5,maxlen=10)
