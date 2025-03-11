@@ -1,7 +1,7 @@
 from random import choice, random
 import string
  
-target  = list("print('hello world')")
+target  = list("you should try coding and writing print('hello world') its not that hard and it will impress all you friends guarantee")
 alphabet = string.ascii_lowercase + " " + "'" + "(" + ")"
  
 pmut = 0.05
