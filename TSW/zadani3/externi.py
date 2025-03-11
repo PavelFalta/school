@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+from logger import WeatherDataLogger
 # Načtení proměnných z .env souboru
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -28,3 +29,6 @@ if __name__ == "__main__":
     response = service.get_weather(city)
     temperature = response["main"]["temp"]
     print(temperature)
+
+    logger = WeatherDataLogger()
+    logger.update_data(city, temperature)

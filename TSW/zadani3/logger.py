@@ -1,3 +1,7 @@
+import json
+import os
+from datetime import datetime
+
 class WeatherDataLogger:
     """Ukládá získaná data o počasí do JSON souboru."""
     FILE_NAME = "weather_data.json"
