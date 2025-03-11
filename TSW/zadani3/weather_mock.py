@@ -27,7 +27,7 @@ class WeatherService:
 
         delta = -((minutes - 30) ** 2) / 100 + 5
 
-        temperature -= delta
+        temperature += delta
 
         return {
             'coord': {'lon': random.uniform(-180, 180), 'lat': random.uniform(-90, 90)},
