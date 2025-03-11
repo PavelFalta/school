@@ -16,10 +16,11 @@ def mutate(parent):
 parent = [choice(alphabet) for _ in range(len(target))]
 igen = 0
 while parent != target:
-    new_parent = parent
-    while new_parent == parent:
-        children = (mutate(parent) for _ in range(nchildren))
-        new_parent = min(children, key=fitness)
-    parent = new_parent
-    print(f"{igen} gen: {''.join(parent)}")
+    children = (mutate(parent) for _ in range(nchildren))
+    new_parent = min(children, key=fitness)
+    if fitness(new_parent) < fitness(parent):
+        parent = new_parent
+        print(f"{igen} gen: {''.join(parent)}")
+    else:
+        print(f"{igen} gen: poor children")
     igen += 1
