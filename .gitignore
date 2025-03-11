@@ -1,3 +1,4 @@
 HBDS/Datasets/
 PZS/data/
 .venv
+.env
