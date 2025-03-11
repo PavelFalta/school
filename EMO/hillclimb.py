@@ -34,10 +34,13 @@ def gamma(alpha, k, n):
 
 # Funkce pro převod Grayova kódu na desítkovou soustavu
 def gray_dec(alpha):
-    binary = [alpha[0]]
+    
+    binary = int(alpha[0])
+    result = binary
     for bit in alpha[1:]:
-        binary.append(str(int(binary[-1]) ^ int(bit)))
-    return int(''.join(binary), 2)
+        binary ^= int(bit)
+        result = (result << 1) | binary
+    return result
 
 # Hlavní funkce
 def main():
