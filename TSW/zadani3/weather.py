@@ -1,10 +1,14 @@
 import requests
 
-
 class WeatherService:
     """Služba pro získání počasí pomocí API klíče uloženého v .env."""
-    def get_weather(self, city, API_KEY):
+    def __init__(self, API_KEY):
+        self.API_KEY = API_KEY
+
+    def get_weather(self, city):
         """Vrátí počasí pro dané město na základě API volání."""
+        API_KEY = self.API_KEY
+
         if not API_KEY:
             raise ValueError("API klíč není nastaven.")
         
@@ -14,4 +18,4 @@ class WeatherService:
         if response.status_code == 200:
             return response.json()
         else:
-            ret
+            return {"error": f"Chyba: {response.status_code}, {response.text}"}
