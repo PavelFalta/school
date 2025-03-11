@@ -9,7 +9,7 @@ API_KEY = os.getenv("API_KEY")
 
 class WeatherService:
     """Služba pro získání počasí pomocí API klíče uloženého v .env."""
-    def get_weather(self, city):
+    def get_weather(self, city, API_KEY=API_KEY):
         """Vrátí počasí pro dané město na základě API volání."""
         if not API_KEY:
             raise ValueError("API klíč není nastaven.")
