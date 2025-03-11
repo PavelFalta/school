@@ -13,7 +13,7 @@ class WeatherService:
         if not API_KEY:
             raise ValueError("API klíč není nastaven.")
         
-        url = url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
         response = requests.get(url)
 
         if response.status_code == 200:
