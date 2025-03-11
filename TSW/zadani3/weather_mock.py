@@ -24,7 +24,9 @@ class WeatherService:
 
         current_time = datetime.now()
         minutes = current_time.minute
-        delta = minutes / 10
+
+        delta = -((minutes - 30) ** 2) / 100 + 9
+
         temperature -= delta
 
         return {
