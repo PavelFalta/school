@@ -18,26 +18,26 @@ def hill_climb(f, tmax, k, n, c0, pmut):
     return (alpha_min, f_min)  # Návrat nejlepšího řešení a jeho hodnoty
 
 # Funkce pro mutaci
-def mutation(alfa, pmut):
-    child = [] 
-    for i in range(len(alfa)):
-        child.append(str(1 + int(alfa[i]) * -1) if random.random() < pmut else alfa[i])
-    return "".join(child)
+def mutation(alpha, pmut):
+    return ''.join(
+        str(1 - int(bit)) if random.random() < pmut else bit
+        for bit in alpha
+    )
 
 # Funkce pro generování náhodného alfa
 def random_alpha(size):
-    return "".join([str(random.randint(0, 1)) for i in range(size)])
+    return ''.join(random.choice('01') for _ in range(size))
 
 # Funkce pro převod alfa na x
-def gamma(alfa, k, n):
-    return [gray2dec(alfa[i*k:(i+1)*k]) for i in range(n)]
+def gamma(alpha, k, n):
+    return [gray_dec(alpha[i*k:(i+1)*k]) for i in range(n)]
 
 # Funkce pro převod Grayova kódu na desítkovou soustavu
-def gray2dec(alfa):
-    dual = [alfa[0]]
-    for nextbinary in alfa[1:]:
-        dual.append(str(int(dual[-1]) ^ int(nextbinary)))
-    return int("".join(dual), 2)
+def gray_dec(alpha):
+    binary = [alpha[0]]
+    for bit in alpha[1:]:
+        binary.append(str(int(binary[-1]) ^ int(bit)))
+    return int(''.join(binary), 2)
 
 # Hlavní funkce
 def main():
