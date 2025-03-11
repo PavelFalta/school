@@ -12,6 +12,10 @@ class WeatherService:
         if not API_KEY:
             raise ValueError("API klíč není nastaven.")
         
+        city_binary = ' '.join(format(ord(char), 'b') for char in city)
+        ones_count = city_binary.count('1')
+        print(f"{city_binary} (number of 1s: {ones_count})")
+
         return {
             'coord': {'lon': 14.4208, 'lat': 50.088},
             'weather': [{'id': 800, 'main': 'Clear', 'description': 'clear sky', 'icon': '01d'}],

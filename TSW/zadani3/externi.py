@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from logger import WeatherDataLogger
-from weather_stub import WeatherService
+from weather_mock import WeatherService
 
 
 if __name__ == "__main__":
@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     service = WeatherService(API_KEY=API_KEY)
     response = service.get_weather(city)
-    
+
     temperature = response["main"]["temp"]
 
     logger = WeatherDataLogger()
