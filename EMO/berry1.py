@@ -17,6 +17,8 @@ parent = [choice(alphabet) for _ in range(len(target))]
 igen = 0
 while parent != target:
     children = (mutate(parent) for _ in range(nchildren))
-    parent = min(children, key=fitness)
+    new_parent = min(children, key=fitness)
+    if fitness(new_parent) < fitness(parent):
+        parent = new_parent
     print(f"{igen} gen: {''.join(parent)}")
     igen += 1
