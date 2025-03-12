@@ -2,9 +2,10 @@ from cv3 import naivni_logisticka_regrese_binarni
 from sklearn.datasets import load_digits
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
 from sklearn.linear_model import LogisticRegression
 from collections import Counter
+from sklearn.model_selection import train_test_split
 
 #visualize data
 digits = load_digits()
@@ -15,26 +16,23 @@ digits = load_digits()
 # plt.title(digits.target[3])
 # plt.show()
 
-#scale data
 scaler = StandardScaler()
 scaler.fit(digits.data)
 
 X = scaler.transform(digits.data)
 Y = digits.target
 
-# for now, only try to clasify one number from rest
-
+# for now, only try to classify one number from rest
 Y = 1 * (Y == 3)
 
-# train model
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+
 model = naivni_logisticka_regrese_binarni()
-model.fit(X,Y)
+model.fit(X_train, Y_train)
 
-# predict
-Y_pred = model.predict(X)
+Y_pred = model.predict(X_test)
 
-# confusion matrix
-cm = confusion_matrix(Y, Y_pred)
+cm = confusion_matrix(Y_test, Y_pred)
 print(cm)
 
 plt.matshow(cm, cmap='viridis')
@@ -42,9 +40,5 @@ plt.title('Confusion Matrix')
 plt.colorbar()
 plt.show()
 
-# accuracy
-accuracy = accuracy_score(Y, Y_pred)
-print(f"Accuracy: {accuracy}")
-
-
-# try to clasify one number from rest
+report = classification_report(Y_test, Y_pred)
+print(report)

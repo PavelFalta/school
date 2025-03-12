@@ -41,12 +41,12 @@ class naivni_logisticka_regrese_binarni:
     # je pouzita iteracni metoda optimalizace, nahodne je zvolena nulta iterace
     w0 = np.random.randn(dimenze) # nahodny bod
     self._w=w0
-    print(f"Pocatecni hodnota krit. fce {self.kriterialni_funkce(w0)}")
-    print(f"Pocatecni hodnota vah w={w0}")
+    # print(f"Pocatecni hodnota krit. fce {self.kriterialni_funkce(w0)}")
+    # print(f"Pocatecni hodnota vah w={w0}")
     res = optimize.minimize(self.kriterialni_funkce, w0, method='BFGS', tol=1e-5)
     self._w = res.x
-    print(f"Konecna hodnota krit. fce {self.kriterialni_funkce(self._w)}")
-    print(f"Konecna hodnota vah w={self._w}")
+    # print(f"Konecna hodnota krit. fce {self.kriterialni_funkce(self._w)}")
+    # print(f"Konecna hodnota vah w={self._w}")
     return self._w
 
   def predict_proba(self, X):
