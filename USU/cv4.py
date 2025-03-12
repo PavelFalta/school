@@ -44,26 +44,17 @@ print(cm)
 report = classification_report(Y_test, Y_pred)
 print(report)
 
-class MultiModalRegression:
-    def __init__(self, models):
-        self.models = models
 
-    def fit(self, X, Y):
-        for model in self.models:
-            model.fit(X, Y)
+models = [naivni_logisticka_regrese_binarni() for _ in range(10)]
+for i, model in enumerate(models):
+    Y = 1 * (digits.target == i)
+    model.fit(X_train, Y)
 
-    def predict(self, X):
-        predictions = []
-        for model in self.models:
-            predictions.append(model.predict(X))
+Y_pred = np.array([model.predict(X_test) for model in models]).T
+Y_pred = np.argmax(Y_pred, axis=1)
 
-        predictions = np.array(predictions)
-        return np.argmax(predictions, axis=0)
+cm = confusion_matrix(Y_test, Y_pred)
+print(cm)
 
-    def predict_proba(self, X):
-        predictions = []
-        for model in self.models:
-            predictions.append(model.predict_proba(X))
-
-        predictions = np.array(predictions)
-        return np.argmax(predictions, axis=0)
+report = classification_report(Y_test, Y_pred)
+print(report)
