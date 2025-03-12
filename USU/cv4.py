@@ -27,7 +27,7 @@ Y = 1 * (Y == 3)
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
-model = naivni_logisticka_regrese_binarni()
+model = LogisticRegression()
 model.fit(X_train, Y_train)
 
 Y_pred = model.predict(X_test)
@@ -35,10 +35,10 @@ Y_pred = model.predict(X_test)
 cm = confusion_matrix(Y_test, Y_pred)
 print(cm)
 
-plt.matshow(cm, cmap='viridis')
-plt.title('Confusion Matrix')
-plt.colorbar()
-plt.show()
+# plt.matshow(cm, cmap='viridis')
+# plt.title('Confusion Matrix')
+# plt.colorbar()
+# plt.show()
 
 report = classification_report(Y_test, Y_pred)
 print(report)
