@@ -2,7 +2,7 @@ from cv3 import naivni_logisticka_regrese_binarni
 from sklearn.datasets import load_digits
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
+from sklearn.metrics import confusion_matrix, accuracy_score, classification_report, ConfusionMatrixDisplay
 from sklearn.linear_model import LogisticRegression
 from collections import Counter
 from sklearn.model_selection import train_test_split
@@ -74,6 +74,8 @@ Y_pred = np.array([model.predict(X_test) for model in trained_models]).T
 Y_pred = np.argmax(Y_pred, axis=1)
 
 cm = confusion_matrix(Y_test, Y_pred)
+ConfusionMatrixDisplay(cm).plot()
+plt.show()
 print(cm)
 
 
