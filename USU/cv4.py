@@ -35,8 +35,8 @@ Y_pred = model.predict(X_test)
 
 cm = confusion_matrix(Y_test, Y_pred)
 print(cm)
-plt.matshow(cm, cmap='viridis')
-plt.show()
+# plt.matshow(cm, cmap='viridis')
+# plt.show()
 
 report = classification_report(Y_test, Y_pred)
 print(report)
