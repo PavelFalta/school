@@ -47,6 +47,7 @@ print(report)
 
 models = [naivni_logisticka_regrese_binarni() for _ in range(10)]
 for i, model in enumerate(models):
+    print(i)
     Y = 1 * (digits.target == i)
     model.fit(X_train, Y)
 
