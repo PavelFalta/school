@@ -25,7 +25,8 @@ class naivni_logisticka_regrese_binarni:
     
     h = self.sigmoida(w, self._X)
 
-    return -1 * np.sum(self._y * np.log(h) + (1 - self._y) * np.log(1 - h))
+    epsilon = 1e-15
+    return -1 * np.sum(self._y * np.log(h + epsilon) + (1 - self._y) * np.log(1 - h + epsilon))
 
 
   def fit(self, X,y):
