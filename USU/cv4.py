@@ -48,26 +48,33 @@ print(report)
 # plt.show()
 
 
-# digits = load_digits()
-# X = digits.data
-# Y = digits.target
+digits = load_digits()
 
-# # Initialize models
-# models = [LogisticRegression(max_iter=10000) for _ in range(10)]
+scaler = MinMaxScaler()
+scaler.fit(digits.data)
 
-# # Fit models
-# for i in range(10):
-#     binary_target = (Y == i).astype(int)
-#     X_train, X_test, Y_train, Y_test = train_test_split(X, binary_target, test_size=0.3, random_state=42)
-#     models[i].fit(X_train, Y_train)
+X = scaler.transform(digits.data)
+Y = digits.target
 
-# # Predict using models
-# Y_pred_probas = np.array([model.predict_proba(X_test)[:, 1] for model in models]).T
-# Y_pred = np.argmax(Y_pred_probas, axis=1)
+# multimodal classification
+# Initialize models
 
-# # Compute and display confusion matrix and classification report
-# cm = confusion_matrix(Y_test, Y_pred)
-# print("Confusion Matrix:\n", cm)
+models = [naivni_logisticka_regrese_binarni() for _ in range(10)]
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
-# report = classification_report(Y_test, Y_pred)
-# print("Classification Report:\n", report)
+trained_models = []
+
+for i, model in enumerate(models):
+    Y = 1 * (Y_train == i)
+    model.fit(X_train, Y)
+
+    trained_models.append(model)
+
+Y_pred = np.array([model.predict(X_test) for model in trained_models]).T
+Y_pred = np.argmax(Y_pred, axis=1)
+
+cm = confusion_matrix(Y_test, Y_pred)
+print(cm)
+
+report = classification_report(Y_test, Y_pred)
+print(report)
