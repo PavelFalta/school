@@ -26,9 +26,6 @@ Y = digits.target
 
 Y = 1 * (Y == 3)
 
-print(Y)
-print(Counter(Y))
-
 # train model
 model = naivni_logisticka_regrese_binarni()
 model.fit(X,Y)
