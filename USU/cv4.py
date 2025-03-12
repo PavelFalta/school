@@ -3,16 +3,17 @@ from sklearn.datasets import load_digits
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix, accuracy_score
-
+from sklearn.linear_model import LogisticRegression
+from collections import Counter
 
 #visualize data
 digits = load_digits()
 
 
-plt.gray()
-plt.matshow(digits.images[3])
-plt.title(digits.target[3])
-plt.show()
+# plt.gray()
+# plt.matshow(digits.images[3])
+# plt.title(digits.target[3])
+# plt.show()
 
 #scale data
 scaler = StandardScaler()
@@ -24,6 +25,9 @@ Y = digits.target
 # for now, only try to clasify one number from rest
 
 Y = 1 * (Y == 3)
+
+print(Y)
+print(Counter(Y))
 
 # train model
 model = naivni_logisticka_regrese_binarni()
