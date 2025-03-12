@@ -36,32 +36,35 @@ Y_pred = model.predict(X_test)
 cm = confusion_matrix(Y_test, Y_pred)
 print(cm)
 
+report = classification_report(Y_test, Y_pred)
+print(report)
+
 # plt.matshow(cm, cmap='viridis')
 # plt.title('Confusion Matrix')
 # plt.colorbar()
 # plt.show()
 
 
-digits = load_digits()
-X = digits.data
-Y = digits.target
+# digits = load_digits()
+# X = digits.data
+# Y = digits.target
 
-# Initialize models
-models = [LogisticRegression(max_iter=10000) for _ in range(10)]
+# # Initialize models
+# models = [LogisticRegression(max_iter=10000) for _ in range(10)]
 
-# Fit models
-for i in range(10):
-    binary_target = (Y == i).astype(int)
-    X_train, X_test, Y_train, Y_test = train_test_split(X, binary_target, test_size=0.3, random_state=42)
-    models[i].fit(X_train, Y_train)
+# # Fit models
+# for i in range(10):
+#     binary_target = (Y == i).astype(int)
+#     X_train, X_test, Y_train, Y_test = train_test_split(X, binary_target, test_size=0.3, random_state=42)
+#     models[i].fit(X_train, Y_train)
 
-# Predict using models
-Y_pred_probas = np.array([model.predict_proba(X_test)[:, 1] for model in models]).T
-Y_pred = np.argmax(Y_pred_probas, axis=1)
+# # Predict using models
+# Y_pred_probas = np.array([model.predict_proba(X_test)[:, 1] for model in models]).T
+# Y_pred = np.argmax(Y_pred_probas, axis=1)
 
-# Compute and display confusion matrix and classification report
-cm = confusion_matrix(Y_test, Y_pred)
-print("Confusion Matrix:\n", cm)
+# # Compute and display confusion matrix and classification report
+# cm = confusion_matrix(Y_test, Y_pred)
+# print("Confusion Matrix:\n", cm)
 
-report = classification_report(Y_test, Y_pred)
-print("Classification Report:\n", report)
+# report = classification_report(Y_test, Y_pred)
+# print("Classification Report:\n", report)
