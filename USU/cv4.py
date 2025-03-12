@@ -39,6 +39,26 @@ print(cm)
 report = classification_report(Y_test, Y_pred)
 print(report)
 
+# Visualize each digit in the confusion matrix
+fig, axes = plt.subplots(nrows=10, ncols=10, figsize=(10, 10))
+fig.suptitle('Confusion Matrix Visualization', fontsize=16)
+
+for i in range(10):
+    for j in range(10):
+        ax = axes[i, j]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        if cm[i, j] > 0:
+            # Find an example of the digit i that was classified as j
+            idx = np.where((Y_test == i) & (Y_pred == j))[0][0]
+            ax.imshow(X_test[idx].reshape(8, 8), cmap='gray')
+        else:
+            ax.imshow(np.zeros((8, 8)), cmap='gray')
+
+plt.tight_layout()
+plt.subplots_adjust(top=0.9)
+plt.show()
+
 # plt.matshow(cm, cmap='viridis')
 # plt.title('Confusion Matrix')
 # plt.colorbar()
