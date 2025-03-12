@@ -47,15 +47,15 @@ print(report)
 
 models = [naivni_logisticka_regrese_binarni() for _ in range(10)]
 for i, model in enumerate(models):
-    print(i)
     Y = 1 * (digits.target == i)
-    model.fit(X_train, Y)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+    model.fit(X_train, Y_train)
 
 Y_pred = np.array([model.predict(X_test) for model in models]).T
 Y_pred = np.argmax(Y_pred, axis=1)
 
-cm = confusion_matrix(Y_test, Y_pred)
+cm = confusion_matrix(digits.target[digits.target < 10], Y_pred)
 print(cm)
 
-report = classification_report(Y_test, Y_pred)
+report = classification_report(digits.target[digits.target < 10], Y_pred)
 print(report)
