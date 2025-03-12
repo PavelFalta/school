@@ -54,8 +54,8 @@ for i, model in enumerate(models):
 Y_pred = np.array([model.predict(X_test) for model in models]).T
 Y_pred = np.argmax(Y_pred, axis=1)
 
-cm = confusion_matrix(digits.target[digits.target < 10], Y_pred)
+cm = confusion_matrix(digits.target[digits.target == i], Y_pred)
 print(cm)
 
-report = classification_report(digits.target[digits.target < 10], Y_pred)
+report = classification_report(digits.target[digits.target == i], Y_pred)
 print(report)
