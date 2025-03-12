@@ -2,6 +2,7 @@ from cv3 import naivni_logisticka_regrese_binarni
 from sklearn.datasets import load_digits
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix, accuracy_score
 
 
 #visualize data
@@ -20,6 +21,29 @@ scaler.fit(digits.data)
 X = scaler.transform(digits.data)
 Y = digits.target
 
-print(X[0])
+# for now, only try to clasify one number from rest
+
+Y = 1 * (Y == 3)
+
+# train model
+model = naivni_logisticka_regrese_binarni()
+model.fit(X,Y)
+
+# predict
+Y_pred = model.predict(X)
+
+# confusion matrix
+cm = confusion_matrix(Y, Y_pred)
+print(cm)
+
+plt.matshow(cm, cmap='viridis')
+plt.title('Confusion Matrix')
+plt.colorbar()
+plt.show()
+
+# accuracy
+accuracy = accuracy_score(Y, Y_pred)
+print(f"Accuracy: {accuracy}")
+
 
 # try to clasify one number from rest
