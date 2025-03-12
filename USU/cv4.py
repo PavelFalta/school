@@ -1,0 +1,2 @@
+from cv3 import naivni_logisticka_regrese_binarni
+
