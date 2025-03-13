@@ -145,36 +145,36 @@ arch_logo = """
  /_-''    ''-_\\
 """
 
-print(arch_logo)
+# print(arch_logo)
 
 def arch_check():
     neofetch_logo = """
                     -`
-                    .o+`
-                    `ooo/
-                    `+oooo:
+                   .o+`
+                  `ooo/
+                 `+oooo:
                 `+oooooo:
                 -+oooooo+:
-                `/:-:++oooo+:
-                `/++++/+++++++:
+              `/:-:++oooo+:
+             `/++++/+++++++:
             `/++++++++++++++:
-            `/+++ooooooooooooo/`
-            ./ooosssso++osssssso+`
-            .oossssso-````/ossssss+`
+           `/+++ooooooooooooo/`
+          ./ooosssso++osssssso+`
+         .oossssso-````/ossssss+`
         -osssssso.      :ssssssso.
-        :osssssss/        osssso+++.
-        /ossssssss/        +ssssooo/-
+       :osssssss/        osssso+++.
+      /ossssssss/        +ssssooo/-
     `/ossssso+/:-        -:/+osssso+-
-    `+sso+:-`                 `.-/+oso:
-    `++:.                           `-/+/
-    .`                                 `/
+   `+sso+:-`                 `.-/+oso:
+  `++:.                           `-/+/
+  .`                                 `/
     """
 
     with open('/etc/os-release') as f:
         for line in f:
             if 'arch' in line.lower():
                 return neofetch_logo
-    return ''
+    return 'You suck ass'
 
 # check if were using arch
 
