@@ -36,7 +36,7 @@ class naivni_logisticka_regrese_binarni:
     """
     dimenze = X.shape[1]+1
     radky = X.shape[0]
-    # priprav si data - pridani sloupce se jednickami, pro bias
+    # priprav si data - pridani sloupce se jednickami, pro bias - intercept
     self._X = np.hstack((np.ones((radky,1)), X)) # pridej jednicky
     self._y = y
     # je pouzita iteracni metoda optimalizace, nahodne je zvolena nulta iterace
