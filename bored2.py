@@ -147,26 +147,35 @@ arch_logo = """
 
 print(arch_logo)
 
-neofetch_logo = """
-                   -`
-                  .o+`
-                 `ooo/
-                `+oooo:
-               `+oooooo:
-               -+oooooo+:
-             `/:-:++oooo+:
-            `/++++/+++++++:
-           `/++++++++++++++:
-          `/+++ooooooooooooo/`
-         ./ooosssso++osssssso+`
-        .oossssso-````/ossssss+`
-       -osssssso.      :ssssssso.
-      :osssssss/        osssso+++.
-     /ossssssss/        +ssssooo/-
-   `/ossssso+/:-        -:/+osssso+-
-  `+sso+:-`                 `.-/+oso:
- `++:.                           `-/+/
- .`                                 `/
-"""
+def arch_check():
+    neofetch_logo = """
+                    -`
+                    .o+`
+                    `ooo/
+                    `+oooo:
+                `+oooooo:
+                -+oooooo+:
+                `/:-:++oooo+:
+                `/++++/+++++++:
+            `/++++++++++++++:
+            `/+++ooooooooooooo/`
+            ./ooosssso++osssssso+`
+            .oossssso-````/ossssss+`
+        -osssssso.      :ssssssso.
+        :osssssss/        osssso+++.
+        /ossssssss/        +ssssooo/-
+    `/ossssso+/:-        -:/+osssso+-
+    `+sso+:-`                 `.-/+oso:
+    `++:.                           `-/+/
+    .`                                 `/
+    """
 
-print(neofetch_logo)
+    with open('/etc/os-release') as f:
+        for line in f:
+            if 'arch' in line.lower():
+                return neofetch_logo
+    return ''
+
+# check if were using arch
+
+print(arch_check())
