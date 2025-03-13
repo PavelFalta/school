@@ -133,3 +133,16 @@ print(preorder_traversal(root))  # Output: [1, 2, 4, 5, 3]
 print(bfs_traversal(root))  # Output: [1, 2, 3, 4, 5]
 print(dfs_traversal(root))  # Output: [1, 2, 4, 5, 3]
 print(postorder_traversal(root))  # Output: [4, 5, 2, 3, 1]
+
+
+arch_logo = """
+       /\\
+      /  \\
+     /\\   \\
+    /      \\
+   /   ,,   \\
+  /   |  |  -\\
+ /_-''    ''-_\\
+"""
+
+print(arch_logo)
