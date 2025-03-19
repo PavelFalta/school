@@ -14,3 +14,9 @@ X = scaler.transform(data)
 
 beta = np.linalg.solve(X.T @ X, X.T @ target)
 print(beta)
+
+# calculate correlation
+correlation = np.corrcoef(data.T)
+plt.matshow(correlation, cmap='viridis')
+plt.colorbar()
+plt.show()
