@@ -63,33 +63,33 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # train random forest classifier
 
 # bayes optimization
+from sklearn.model_selection import KFold
 
-def train_random_forest(n_estimators, max_depth):
-    clf = RandomForestClassifier(n_estimators=int(n_estimators), max_depth=int(max_depth))
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    return np.mean(y_pred == y_test)
+# K-Fold Cross-Validation
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-pbounds = {
-    'n_estimators': (10, 1000),
-    'max_depth': (1, 100),
-    'min_samples_split': (2, 20),
-    'min_samples_leaf': (1, 20)
-}
+# Modify train_xgboost to work with K-Fold
+def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight):
+    accuracies = []
+    for train_index, test_index in kf.split(X):
+        X_train_fold, X_test_fold = X[train_index], X[test_index]
+        y_train_fold, y_test_fold = y[train_index], y[test_index]
+        
+        clf = XGBClassifier(
+            n_estimators=int(n_estimators),
+            max_depth=int(max_depth),
+            learning_rate=learning_rate,
+            min_child_weight=int(min_child_weight),
+            use_label_encoder=False,
+            eval_metric='logloss'
+        )
+        clf.fit(X_train_fold, y_train_fold)
+        y_pred_fold = clf.predict(X_test_fold)
+        accuracies.append(np.mean(y_pred_fold == y_test_fold))
+    
+    return np.mean(accuracies)
 
-def train_xgboost(n_estimators, max_depth, learning_rate, min_child_weight):
-    clf = XGBClassifier(
-        n_estimators=int(n_estimators),
-        max_depth=int(max_depth),
-        learning_rate=learning_rate,
-        min_child_weight=int(min_child_weight),
-        use_label_encoder=False,
-        eval_metric='logloss'
-    )
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    return np.mean(y_pred == y_test)
-
+# Update Bayesian Optimization to use the K-Fold function
 pbounds = {
     'n_estimators': (10, 1000),
     'max_depth': (1, 100),
@@ -97,11 +97,12 @@ pbounds = {
     'min_child_weight': (1, 10)
 }
 
-optimizer = BayesianOptimization(f=train_xgboost, pbounds=pbounds, random_state=42)
+optimizer = BayesianOptimization(f=train_xgboost_kfold, pbounds=pbounds, random_state=42)
 optimizer.maximize(init_points=20, n_iter=20)
 
 best = optimizer.max['params']
 
+# Train final model with the best parameters
 clf = XGBClassifier(
     n_estimators=int(best['n_estimators']),
     max_depth=int(best['max_depth']),
@@ -112,8 +113,7 @@ clf = XGBClassifier(
 )
 clf.fit(X_train, y_train)
 
-# evaluate classifier
-
+# Evaluate classifier
 y_pred = clf.predict(X_test)
 
 print(confusion_matrix(y_test, y_pred))
