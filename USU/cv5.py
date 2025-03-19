@@ -12,5 +12,5 @@ scaler = MinMaxScaler()
 scaler.fit(data)
 X = scaler.transform(data)
 
-beta = np.linalg.inv(X.T @ X) @ X.T @ target
+beta = np.linalg.solve(X.T @ X, X.T @ target)
 print(beta)
