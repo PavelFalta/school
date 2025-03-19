@@ -59,11 +59,9 @@ y = np.array([0] * len(histograms1) + [1] * len(histograms2))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Move data to GPU to match XGBoost device
-import xgboost as xgb
-
-X_train = xgb.DMatrix(np.array(X_train, dtype=np.float32))
-X_test = xgb.DMatrix(np.array(X_test, dtype=np.float32))
+# Convert data to float32 for compatibility with XGBoost
+X_train = np.array(X_train, dtype=np.float32)
+X_test = np.array(X_test, dtype=np.float32)
 y_train = np.array(y_train, dtype=np.float32)
 y_test = np.array(y_test, dtype=np.float32)
 
