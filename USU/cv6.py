@@ -1,4 +1,4 @@
-#load from lomy, two folders with images, two classes
+
 
 import os
 import cv2
@@ -36,7 +36,7 @@ folder2 = 'lomy/tvarnylom_jpg'
 images1 = load_images_from_folder(folder1)
 images2 = load_images_from_folder(folder2)
 print(len(images1), len(images2))
-# for both classes, get colors and display color histograms
+
 
 def compute_histograms(images):
     histograms = []
@@ -48,23 +48,23 @@ def compute_histograms(images):
 histograms1 = compute_histograms(images1)
 histograms2 = compute_histograms(images2)
 
-# plt.figure(figsize=(10, 5))
-# plt.subplot(1, 2, 1)
-# plt.plot(histograms1[0])
-# plt.subplot(1, 2, 2)
-# plt.plot(histograms2[0])
-# plt.show()
 
-# create dataset
+
+
+
+
+
+
+
 
 X = np.array([hist.flatten() for hist in histograms1 + histograms2])
 y = np.array([0] * len(histograms1) + [1] * len(histograms2))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# train random forest classifier
 
-# bayes optimization
+
+
 
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
@@ -88,7 +88,7 @@ def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight
     
     return np.mean(accuracies)
 
-# Update Bayesian Optimization to use the K-Fold function
+
 pbounds = {
     'n_estimators': (10, 1000),
     'max_depth': (1, 100),
@@ -101,7 +101,7 @@ optimizer.maximize(init_points=20, n_iter=20)
 
 best = optimizer.max['params']
 
-# Train final model with the best parameters
+
 clf = XGBClassifier(
     n_estimators=int(best['n_estimators']),
     max_depth=int(best['max_depth']),
@@ -112,7 +112,7 @@ clf = XGBClassifier(
 )
 clf.fit(X_train, y_train)
 
-# Evaluate classifier
+
 y_pred = clf.predict(X_test)
 
 print(confusion_matrix(y_test, y_pred))
