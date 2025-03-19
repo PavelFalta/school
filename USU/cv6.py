@@ -30,28 +30,28 @@ images2 = load_images_from_folder(folder2)
 print(len(images1), len(images2))
 # for both classes, get colors and display color histograms
 
-def get_colors_concurrent(images):
-    def extract_colors(image):
+def get_colors_optimized(images):
+    colors = [[], [], []]
+    for idx, image in enumerate(images):
+        print(f"Processing image {idx + 1}/{len(images)} for color extraction.")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        return [image[:, :, i].ravel() for i in range(3)]
-
-    colors = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        results = executor.map(extract_colors, images)
-        for color_set in results:
-            colors.extend(color_set)
+        for i in range(3):
+            colors[i].extend(image[:, :, i].ravel())
+    print("Color extraction completed.")
     return colors
 
-colors1 = get_colors_concurrent(images1)
-colors2 = get_colors_concurrent(images2)
+colors1 = get_colors_optimized(images1)
+colors2 = get_colors_optimized(images2)
 
-def display_histograms_concurrent(colors):
-    def plot_histogram(color):
-        plt.hist(color, bins=256, range=(0, 256), density=True, alpha=0.5)
-
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        executor.map(plot_histogram, colors)
+def display_histograms_optimized(colors):
+    colors_labels = ['Red', 'Green', 'Blue']
+    print("Displaying histograms.")
+    for i in range(3):
+        print(f"Plotting {colors_labels[i]} histogram.")
+        plt.hist(colors[i], bins=256, range=(0, 256), density=True, alpha=0.5, label=colors_labels[i])
+    plt.legend()
     plt.show()
+    print("Histograms displayed.")
 
-display_histograms_concurrent(colors1)
-display_histograms_concurrent(colors2)
+display_histograms_optimized(colors1)
+display_histograms_optimized(colors2)
