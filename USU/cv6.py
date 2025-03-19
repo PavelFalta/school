@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 import concurrent.futures
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 
 
 def load_images_from_folder(folder):
@@ -42,12 +42,12 @@ def compute_histograms(images):
 histograms1 = compute_histograms(images1)
 histograms2 = compute_histograms(images2)
 
-plt.figure(figsize=(10, 5))
-plt.subplot(1, 2, 1)
-plt.plot(histograms1[0])
-plt.subplot(1, 2, 2)
-plt.plot(histograms2[0])
-plt.show()
+# plt.figure(figsize=(10, 5))
+# plt.subplot(1, 2, 1)
+# plt.plot(histograms1[0])
+# plt.subplot(1, 2, 2)
+# plt.plot(histograms2[0])
+# plt.show()
 
 # create dataset
 
@@ -67,3 +67,7 @@ y_pred = clf.predict(X_test)
 
 print(confusion_matrix(y_test, y_pred))
 print(classification_report(y_test, y_pred))
+
+disp = ConfusionMatrixDisplay(confusion_matrix=confusion_matrix(y_test, y_pred))
+disp.plot()
+plt.show()
