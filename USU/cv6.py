@@ -9,6 +9,7 @@ import concurrent.futures
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from bayes_opt import BayesianOptimization
+from xgboost import XGBClassifier
 
 
 def load_images_from_folder(folder):
