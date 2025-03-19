@@ -59,7 +59,43 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 # train random forest classifier
 
-clf = RandomForestClassifier(n_estimators=100)
+# bayes optimization
+
+def train_random_forest(n_estimators, max_depth):
+    clf = RandomForestClassifier(n_estimators=int(n_estimators), max_depth=int(max_depth))
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    return np.mean(y_pred == y_test)
+
+pbounds = {
+    'n_estimators': (10, 1000),
+    'max_depth': (1, 100),
+    'min_samples_split': (2, 20),
+    'min_samples_leaf': (1, 20)
+}
+
+def train_random_forest(n_estimators, max_depth, min_samples_split, min_samples_leaf):
+    clf = RandomForestClassifier(
+        n_estimators=int(n_estimators),
+        max_depth=int(max_depth),
+        min_samples_split=int(min_samples_split),
+        min_samples_leaf=int(min_samples_leaf)
+    )
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    return np.mean(y_pred == y_test)
+
+optimizer = BayesianOptimization(f=train_random_forest, pbounds=pbounds, random_state=42)
+optimizer.maximize(init_points=10, n_iter=10)
+
+best = optimizer.max['params']
+
+clf = RandomForestClassifier(
+    n_estimators=int(best['n_estimators']),
+    max_depth=int(best['max_depth']),
+    min_samples_split=int(best['min_samples_split']),
+    min_samples_leaf=int(best['min_samples_leaf'])
+)
 clf.fit(X_train, y_train)
 
 # evaluate classifier
