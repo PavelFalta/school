@@ -76,8 +76,8 @@ def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight
             max_depth=int(max_depth),
             learning_rate=learning_rate,
             min_child_weight=int(min_child_weight),
-            use_label_encoder=True,
-            tree_method='gpu_hist',  # Use GPU acceleration
+            tree_method='hist',  # Use histogram-based method
+            device='cuda',       # Use GPU acceleration
             eval_metric='logloss'
         )
         clf.fit(X_train_fold, y_train_fold)
@@ -85,6 +85,7 @@ def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight
         accuracies.append(np.mean(y_pred_fold == y_test_fold))
     
     return np.mean(accuracies)
+
 
 
 pbounds = {
@@ -99,16 +100,17 @@ optimizer.maximize(init_points=20, n_iter=20)
 
 best = optimizer.max['params']
 
-
 clf = XGBClassifier(
     n_estimators=int(best['n_estimators']),
     max_depth=int(best['max_depth']),
     learning_rate=best['learning_rate'],
     min_child_weight=int(best['min_child_weight']),
-    use_label_encoder=False,
+    tree_method='hist',  # Use histogram-based method
+    device='cuda',       # Use GPU acceleration
     eval_metric='logloss'
 )
 clf.fit(X_train, y_train)
+
 
 
 y_pred = clf.predict(X_test)
