@@ -8,8 +8,9 @@ from matplotlib import pyplot as plt
 
 def load_images_from_folder(folder):
     images = []
-    for filename in os.listdir(folder):
-        img = cv2.imread(os.path.join(folder,filename))
+    filepaths = [os.path.join(folder, filename) for filename in os.listdir(folder)]
+    for filepath in filepaths:
+        img = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
         if img is not None:
             images.append(img)
     return images
