@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 import concurrent.futures
-# Removed unused RandomForestClassifier import
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from bayes_opt import BayesianOptimization
 from xgboost import XGBClassifier
@@ -59,12 +59,6 @@ y = np.array([0] * len(histograms1) + [1] * len(histograms2))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Convert data to float32 for compatibility with XGBoost
-X_train = np.array(X_train, dtype=np.float32)
-X_test = np.array(X_test, dtype=np.float32)
-y_train = np.array(y_train, dtype=np.float32)
-y_test = np.array(y_test, dtype=np.float32)
-
 
 
 
@@ -82,8 +76,8 @@ def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight
             max_depth=int(max_depth),
             learning_rate=learning_rate,
             min_child_weight=int(min_child_weight),
-            tree_method='hist',  # Use histogram-based method
-            device='cuda',       # Use GPU acceleration
+            use_label_encoder=True,
+            tree_method='gpu_hist',  # Use GPU acceleration
             eval_metric='logloss'
         )
         clf.fit(X_train_fold, y_train_fold)
@@ -91,7 +85,6 @@ def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight
         accuracies.append(np.mean(y_pred_fold == y_test_fold))
     
     return np.mean(accuracies)
-
 
 
 pbounds = {
@@ -106,17 +99,16 @@ optimizer.maximize(init_points=20, n_iter=20)
 
 best = optimizer.max['params']
 
+
 clf = XGBClassifier(
     n_estimators=int(best['n_estimators']),
     max_depth=int(best['max_depth']),
     learning_rate=best['learning_rate'],
     min_child_weight=int(best['min_child_weight']),
-    tree_method='hist',  # Use histogram-based method
-    device='cuda',       # Use GPU acceleration
-
+    use_label_encoder=False,
+    eval_metric='logloss'
 )
-clf.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
-
+clf.fit(X_train, y_train)
 
 
 y_pred = clf.predict(X_test)
