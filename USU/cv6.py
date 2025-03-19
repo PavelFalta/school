@@ -30,21 +30,28 @@ images2 = load_images_from_folder(folder2)
 print(len(images1), len(images2))
 # for both classes, get colors and display color histograms
 
-def get_colors(images):
-    colors = []
-    for image in images:
+def get_colors_concurrent(images):
+    def extract_colors(image):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        for i in range(3):
-            colors.append(image[:, :, i].ravel())
+        return [image[:, :, i].ravel() for i in range(3)]
+
+    colors = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = executor.map(extract_colors, images)
+        for color_set in results:
+            colors.extend(color_set)
     return colors
 
-colors1 = get_colors(images1)
-colors2 = get_colors(images2)
+colors1 = get_colors_concurrent(images1)
+colors2 = get_colors_concurrent(images2)
 
-def display_histograms(colors):
-    for i in range(len(colors)):
-        plt.hist(colors[i], bins=256, range=(0, 256), density=True, alpha=0.5)
+def display_histograms_concurrent(colors):
+    def plot_histogram(color):
+        plt.hist(color, bins=256, range=(0, 256), density=True, alpha=0.5)
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor.map(plot_histogram, colors)
     plt.show()
 
-display_histograms(colors1)
-display_histograms(colors2)
+display_histograms_concurrent(colors1)
+display_histograms_concurrent(colors2)
