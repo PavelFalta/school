@@ -9,6 +9,7 @@ import concurrent.futures
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 
+
 def load_images_from_folder(folder):
     def load_image(filepath):
         img = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
@@ -47,3 +48,22 @@ plt.plot(histograms1[0])
 plt.subplot(1, 2, 2)
 plt.plot(histograms2[0])
 plt.show()
+
+# create dataset
+
+X = np.array([hist.flatten() for hist in histograms1 + histograms2])
+y = np.array([0] * len(histograms1) + [1] * len(histograms2))
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# train random forest classifier
+
+clf = RandomForestClassifier(n_estimators=100)
+clf.fit(X_train, y_train)
+
+# evaluate classifier
+
+y_pred = clf.predict(X_test)
+
+print(confusion_matrix(y_test, y_pred))
+print(classification_report(y_test, y_pred))
