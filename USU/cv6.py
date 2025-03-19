@@ -75,27 +75,38 @@ pbounds = {
     'min_samples_leaf': (1, 20)
 }
 
-def train_random_forest(n_estimators, max_depth, min_samples_split, min_samples_leaf):
-    clf = RandomForestClassifier(
+def train_xgboost(n_estimators, max_depth, learning_rate, min_child_weight):
+    clf = XGBClassifier(
         n_estimators=int(n_estimators),
         max_depth=int(max_depth),
-        min_samples_split=int(min_samples_split),
-        min_samples_leaf=int(min_samples_leaf)
+        learning_rate=learning_rate,
+        min_child_weight=int(min_child_weight),
+        use_label_encoder=False,
+        eval_metric='logloss'
     )
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     return np.mean(y_pred == y_test)
 
-optimizer = BayesianOptimization(f=train_random_forest, pbounds=pbounds, random_state=42)
+pbounds = {
+    'n_estimators': (10, 1000),
+    'max_depth': (1, 100),
+    'learning_rate': (0.01, 0.3),
+    'min_child_weight': (1, 10)
+}
+
+optimizer = BayesianOptimization(f=train_xgboost, pbounds=pbounds, random_state=42)
 optimizer.maximize(init_points=20, n_iter=20)
 
 best = optimizer.max['params']
 
-clf = RandomForestClassifier(
+clf = XGBClassifier(
     n_estimators=int(best['n_estimators']),
     max_depth=int(best['max_depth']),
-    min_samples_split=int(best['min_samples_split']),
-    min_samples_leaf=int(best['min_samples_leaf'])
+    learning_rate=best['learning_rate'],
+    min_child_weight=int(best['min_child_weight']),
+    use_label_encoder=False,
+    eval_metric='logloss'
 )
 clf.fit(X_train, y_train)
 
