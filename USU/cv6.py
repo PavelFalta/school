@@ -10,6 +10,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from bayes_opt import BayesianOptimization
 from xgboost import XGBClassifier
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='xgboost')
 
 
 def load_images_from_folder(folder):
