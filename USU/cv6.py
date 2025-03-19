@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 import concurrent.futures
-from sklearn.ensemble import RandomForestClassifier
+# Removed unused RandomForestClassifier import
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from bayes_opt import BayesianOptimization
 from xgboost import XGBClassifier
@@ -59,6 +59,14 @@ y = np.array([0] * len(histograms1) + [1] * len(histograms2))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# Move data to GPU to match XGBoost device
+import xgboost as xgb
+
+X_train = xgb.DMatrix(np.array(X_train, dtype=np.float32))
+X_test = xgb.DMatrix(np.array(X_test, dtype=np.float32))
+y_train = np.array(y_train, dtype=np.float32)
+y_test = np.array(y_test, dtype=np.float32)
+
 
 
 
@@ -107,9 +115,9 @@ clf = XGBClassifier(
     min_child_weight=int(best['min_child_weight']),
     tree_method='hist',  # Use histogram-based method
     device='cuda',       # Use GPU acceleration
-    eval_metric='logloss'
+
 )
-clf.fit(X_train, y_train)
+clf.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 
 
 
