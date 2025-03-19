@@ -12,9 +12,6 @@ from bayes_opt import BayesianOptimization
 from xgboost import XGBClassifier
 from sklearn.model_selection import KFold
 
-import warnings
-warnings.filterwarnings('ignore', category=UserWarning, module='xgboost')
-
 
 def load_images_from_folder(folder):
     def load_image(filepath):
@@ -79,7 +76,8 @@ def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight
             max_depth=int(max_depth),
             learning_rate=learning_rate,
             min_child_weight=int(min_child_weight),
-            use_label_encoder=False,
+            use_label_encoder=True,
+            tree_method='gpu_hist',  # Use GPU acceleration
             eval_metric='logloss'
         )
         clf.fit(X_train_fold, y_train_fold)
