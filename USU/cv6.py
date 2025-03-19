@@ -30,28 +30,24 @@ images2 = load_images_from_folder(folder2)
 print(len(images1), len(images2))
 # for both classes, get colors and display color histograms
 
-def get_colors_optimized(images):
-    colors = [[], [], []]
+def get_grayscale_values(images):
+    grayscale_values = []
     for idx, image in enumerate(images):
-        print(f"Processing image {idx + 1}/{len(images)} for color extraction.")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        for i in range(3):
-            colors[i].extend(image[:, :, i].ravel())
-    print("Color extraction completed.")
-    return colors
+        # print(f"Processing image {idx + 1}/{len(images)} for grayscale extraction.")
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        grayscale_values.extend(gray_image.ravel())
+    print("Grayscale extraction completed.")
+    return grayscale_values
 
-colors1 = get_colors_optimized(images1)
-colors2 = get_colors_optimized(images2)
+grayscale_values1 = get_grayscale_values(images1)
+grayscale_values2 = get_grayscale_values(images2)
 
-def display_histograms_optimized(colors):
-    colors_labels = ['Red', 'Green', 'Blue']
-    print("Displaying histograms.")
-    for i in range(3):
-        print(f"Plotting {colors_labels[i]} histogram.")
-        plt.hist(colors[i], bins=256, range=(0, 256), density=True, alpha=0.5, label=colors_labels[i])
+def display_grayscale_histogram(values, label):
+    print(f"Displaying grayscale histogram for {label}.")
+    plt.hist(values, bins=256, range=(0, 256), density=True, color='gray', alpha=0.7, label=label)
     plt.legend()
     plt.show()
-    print("Histograms displayed.")
+    print(f"Grayscale histogram for {label} displayed.")
 
-display_histograms_optimized(colors1)
-display_histograms_optimized(colors2)
+display_grayscale_histogram(grayscale_values1, "Class 1")
+display_grayscale_histogram(grayscale_values2, "Class 2")
