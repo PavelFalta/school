@@ -86,7 +86,7 @@ def train_random_forest(n_estimators, max_depth, min_samples_split, min_samples_
     return np.mean(y_pred == y_test)
 
 optimizer = BayesianOptimization(f=train_random_forest, pbounds=pbounds, random_state=42)
-optimizer.maximize(init_points=10, n_iter=10)
+optimizer.maximize(init_points=20, n_iter=20)
 
 best = optimizer.max['params']
 
