@@ -10,6 +10,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from bayes_opt import BayesianOptimization
 from xgboost import XGBClassifier
+from sklearn.model_selection import KFold
+
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='xgboost')
 
@@ -63,12 +65,9 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # train random forest classifier
 
 # bayes optimization
-from sklearn.model_selection import KFold
 
-# K-Fold Cross-Validation
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-# Modify train_xgboost to work with K-Fold
 def train_xgboost_kfold(n_estimators, max_depth, learning_rate, min_child_weight):
     accuracies = []
     for train_index, test_index in kf.split(X):
