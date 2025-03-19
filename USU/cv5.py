@@ -13,4 +13,4 @@ print(target[:5])
 print(data.shape)
 print(target.shape)
 
-print(raw_df.describe())
+print(raw_df.info())
