@@ -1,0 +1,20 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Environment files
+.env
+
+# Build output
+/src/public/js/*.js
+!/src/public/js/.gitkeep
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db 

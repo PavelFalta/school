@@ -1,0 +1,12 @@
+{
+  "name": "rss-aggregator-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for RSS Feed Aggregator",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+} 

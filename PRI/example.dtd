@@ -1,0 +1,30 @@
+<!ELEMENT school (student*, teacher*, class*)>
+
+<!ELEMENT student (name, age, grade, address)>
+<!ATTLIST student
+    id ID #REQUIRED
+    enrolled CDATA #IMPLIED
+    gender (male|female|other) #IMPLIED>
+
+<!ELEMENT teacher (name, subject, address)>
+<!ATTLIST teacher
+    id ID #REQUIRED
+    department CDATA #IMPLIED
+    tenure (yes|no) #IMPLIED>
+
+<!ELEMENT class (name, schedule, room)>
+<!ATTLIST class
+    id ID #REQUIRED
+    capacity CDATA #IMPLIED>
+
+<!ELEMENT address (street, city, state, zip)>
+<!ELEMENT street (#PCDATA)>
+<!ELEMENT city (#PCDATA)>
+<!ELEMENT state (#PCDATA)>
+<!ELEMENT zip (#PCDATA)>
+
+<!ELEMENT schedule (day, time)>
+<!ELEMENT day (#PCDATA)>
+<!ELEMENT time (#PCDATA)>
+
+<!ELEMENT room (#PCDATA)>

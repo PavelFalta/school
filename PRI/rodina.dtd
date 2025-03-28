@@ -1,0 +1,6 @@
+<!ELEMENT rodina (osoba+)>
+<!ELEMENT osoba (jmeno, prijmeni, vek, vztah)>
+<!ELEMENT jmeno (#PCDATA)>
+<!ELEMENT prijmeni (#PCDATA)>
+<!ELEMENT vek (#PCDATA)>
+<!ELEMENT vztah (#PCDATA)>

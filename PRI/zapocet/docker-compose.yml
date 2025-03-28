@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=rss_aggregator
+      - POSTGRES_USER=rss_user
+      - POSTGRES_PASSWORD=rss_password
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      - php
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=rss_aggregator
+      - POSTGRES_USER=rss_user
+      - POSTGRES_PASSWORD=rss_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data: 

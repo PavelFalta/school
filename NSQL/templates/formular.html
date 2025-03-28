@@ -1,0 +1,17 @@
+{% extends "template.html" %}
+
+{% block main %}
+<form action="/formular" method="post">
+    <fieldset>
+        <label for="jmeno">Nazev:</label>
+        <input type="text" id="jmeno" name="jmeno" placeholder="Zadej nazev: " required>
+        <br>
+        <label for="ingredience">Ingredience:</label>
+        <textarea cols="50" rows="5" id="ingredience" name="ingredience" placeholder="zadej zvlast na radek ingredience" required></textarea>
+        <br>
+        <label for="postup">Postup:</label>
+        <textarea cols="50" rows="5" id="postup" name="postup" placeholder="zadej postup receptu" required></textarea>
+    </fieldset>
+    <button type="submit">Posli recept</button>
+</form>
+{% endblock %}

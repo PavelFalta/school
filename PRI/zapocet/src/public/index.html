@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Feed Aggregator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <nav>
+                <div class="logo">RSS Aggregator</div>
+                <div class="nav-links">
+                    <a href="#" id="home-link">Home</a>
+                    <a href="#" id="login-link">Login</a>
+                    <a href="#" id="register-link">Register</a>
+                    <a href="#" id="feeds-link" class="hidden">My Feeds</a>
+                    <a href="#" id="logout-link" class="hidden">Logout</a>
+                </div>
+            </nav>
+        </header>
+
+        <main>
+            <div id="auth-container">
+                <!-- Login form -->
+                <div id="login-form" class="auth-form">
+                    <h2>Login</h2>
+                    <form>
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit">Login</button>
+                    </form>
+                </div>
+
+                <!-- Register form -->
+                <div id="register-form" class="auth-form hidden">
+                    <h2>Register</h2>
+                    <form>
+                        <div class="form-group">
+                            <label for="register-username">Username</label>
+                            <input type="text" id="register-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email">Email</label>
+                            <input type="email" id="register-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" required>
+                        </div>
+                        <button type="submit">Register</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="feeds-container" class="hidden">
+                <h2>Available Feeds</h2>
+                <div id="feeds-list" class="feeds-grid"></div>
+            </div>
+
+            <div id="my-feeds-container" class="hidden">
+                <h2>My Feeds</h2>
+                <div id="my-feeds-list" class="feeds-grid"></div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="js/app.ts"></script>
+</body>
+</html> 
