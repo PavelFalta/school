@@ -9,13 +9,8 @@ from time import perf_counter
 
 
 def test_navigace(driver):
-    try:
-        about_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Browse")
-        about_link.click()
-    except Exception as e:
-        browse_link = driver.find_element(By.XPATH, "//a[contains(text(), 'Browse IS/STAG') and contains(@class, 'collapsed')]")
-        browse_link.click()
-        print("Found and clicked Browse IS/STAG link via text content.")
+    about_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Browse")
+    about_link.click()
     time.sleep(0.3)
 
     assert "prohlizeni.html" in driver.current_url
@@ -45,7 +40,7 @@ password = os.getenv("STAG_PASSWORD")
 try:
     start = perf_counter()
     driver.get("https://portal.ujep.cz/")
-    driver.set_window_size(500, 800)
+    # driver.set_window_size(500, 800)
 
     try:
         burger_menu = driver.find_element(By.ID, "mobile_menu_display_btn")
@@ -60,6 +55,11 @@ try:
 
     elements = driver.find_elements(By.XPATH, "//*[@aria-label]")
     print(f"Počet ARIA prvků na stránce: {len(elements)}")
+    if elements:
+        print(f"------ ARIA prvky na stránce ---")
+        for element in elements:
+            print(element.get_attribute("aria-label"))
+        print("------ KONEC ARIA prvků na stránce ---")
     
     test_prihlaseni(driver)
     print("Test přihlášení prošel.")
@@ -68,6 +68,11 @@ try:
 
     elements = driver.find_elements(By.XPATH, "//*[@aria-label]")
     print(f"Počet ARIA prvků na stránce: {len(elements)}")
+    if elements:
+        print(f"------ ARIA prvky na stránce ---")
+        for element in elements:
+            print(element.get_attribute("aria-label"))
+        print("------ KONEC ARIA prvků na stránce ---")
 
     start = perf_counter()
     driver.get("https://portal.ujep.cz/portal/studium/uchazec/eprihlaska.html")
