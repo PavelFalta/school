@@ -73,6 +73,12 @@ try:
     language_select = Select(language_dropdown)
     language_select.select_by_value("CZ")
 
+    search_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Search')]")
+    search_button.click()
+
+    time.sleep(1)
+
+    
 
 
 except Exception as e:
