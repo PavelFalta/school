@@ -6,12 +6,27 @@ import dotenv
 import os
 
 
-def test_navigace():
+def test_navigace(driver):
     about_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Browse")
     about_link.click()
-    time.sleep(2)
+
+    time.sleep(1)
+
     assert "prohlizeni.html" in driver.current_url
-    print("Test navigace prošel.")
+
+def test_prihlaseni(driver):
+    username_input = driver.find_element(By.NAME, "loginName")
+    password_input = driver.find_element(By.NAME, "password")
+
+    
+    username_input.send_keys(username)
+    password_input.send_keys(password)
+    
+    password_input.send_keys(Keys.RETURN)
+    
+    time.sleep(1)
+    
+    assert "přihlášen" in driver.page_source
 
 
 dotenv.load_dotenv()
@@ -24,20 +39,10 @@ try:
     
     driver.get("https://portal.ujep.cz/")
     
-    username_input = driver.find_element(By.NAME, "loginName")
-    password_input = driver.find_element(By.NAME, "password")
-
-    
-    username_input.send_keys(username)
-    password_input.send_keys(password)
-    
-    password_input.send_keys(Keys.RETURN)
-    
-    time.sleep(1)
-    
-    if "přihlášen" not in driver.page_source:
-        raise Exception("Přihlášení selhalo.")
+    test_prihlaseni(driver)
     print("Test přihlášení prošel.")
+    test_navigace(driver)
+    print("Test navigace prošel.")
 
 
 
