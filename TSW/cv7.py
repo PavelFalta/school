@@ -26,7 +26,7 @@ def test_prihlaseni(driver):
     
     time.sleep(1)
     
-    assert "přihlášen" in driver.page_source
+    assert "logout" in driver.page_source
 
 
 dotenv.load_dotenv()
