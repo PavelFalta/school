@@ -12,7 +12,7 @@ def test_navigace(driver):
     about_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Browse")
     about_link.click()
 
-    time.sleep(1)
+    time.sleep(0.3)
 
     assert "prohlizeni.html" in driver.current_url
 
@@ -26,7 +26,7 @@ def test_prihlaseni(driver):
     
     password_input.send_keys(Keys.RETURN)
     
-    time.sleep(1)
+    time.sleep(0.3)
     
     assert "logout" in driver.page_source
 
@@ -37,9 +37,12 @@ driver = webdriver.Chrome()
 username = os.getenv("STAG_USERNAME")
 password = os.getenv("STAG_PASSWORD")
 
+
 try:
     start = perf_counter()
     driver.get("https://portal.ujep.cz/")
+    # driver.set_window_size(500, 800)
+
     end = perf_counter()
     print(f"Načtení stránky trvalo {end - start:.2f} sekund.")
 
@@ -64,7 +67,7 @@ try:
 
     podat_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Submit an application')]")
     podat_button.click()
-    time.sleep(1)
+    time.sleep(0.3)
 
     faculty_dropdown = driver.find_element(By.NAME, "fakulta")
 
@@ -93,7 +96,7 @@ try:
 
     print("Výběr úspěsný...")
 
-    time.sleep(1)
+    time.sleep(0.3)
 
     #7. Ověřte, že v pravém seznamu oboru nachází obory: Ekonomika a management, Regionální rozvoj a veřejná správa, Sociální politika a sociální práce.
 
