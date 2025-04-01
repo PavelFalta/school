@@ -41,7 +41,9 @@ password = os.getenv("STAG_PASSWORD")
 try:
     start = perf_counter()
     driver.get("https://portal.ujep.cz/")
-    # driver.set_window_size(500, 800)
+    driver.set_window_size(500, 800)
+
+    
 
     end = perf_counter()
     print(f"Načtení stránky trvalo {end - start:.2f} sekund.")
