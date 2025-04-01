@@ -78,7 +78,13 @@ try:
 
     time.sleep(1)
 
-    
+    #7. Ověřte, že v pravém seznamu oboru nachází obory: Ekonomika a management, Regionální rozvoj a veřejná správa, Sociální politika a sociální práce.
+
+    assert "Ekonomika a management" in driver.page_source
+    assert "Regionální rozvoj a veřejná správa" in driver.page_source
+    assert "Sociální politika a sociální práce" in driver.page_source
+
+    print("Test úspěšný.")
 
 
 except Exception as e:
