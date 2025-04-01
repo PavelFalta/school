@@ -44,6 +44,8 @@ try:
     test_navigace(driver)
     print("Test navigace prošel.")
 
+    driver.get("https://portal.ujep.cz/portal/studium/uchazec/eprihlaska.html")
+
 
 
 
