@@ -18,6 +18,7 @@ try:
     username_input = driver.find_element(By.NAME, "loginName")
     password_input = driver.find_element(By.NAME, "password")
     
+    
     username_input.send_keys(username)
     password_input.send_keys(password)
     
