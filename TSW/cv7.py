@@ -4,7 +4,7 @@ from selenium.webdriver.common.keys import Keys
 import time
 import dotenv
 import os
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import Select, WebDriverWait
 from time import perf_counter
 
 
