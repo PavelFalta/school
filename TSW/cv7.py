@@ -56,8 +56,22 @@ try:
     select = Select(faculty_dropdown)
 
     select.select_by_value("FSE")
+    
+    form_dropdown = driver.find_element(By.NAME, "forma")
+    form_select = Select(form_dropdown)
+    form_select.select_by_value("K")
+    
+    type_dropdown = driver.find_element(By.NAME, "typ")
+    type_select = Select(type_dropdown)
+    type_select.select_by_value("7")
 
-    time.sleep(1)
+    location_dropdown = driver.find_element(By.NAME, "misto")
+    location_select = Select(location_dropdown)
+    location_select.select_by_value("U")
+
+    language_dropdown = driver.find_element(By.NAME, "jazyk")
+    language_select = Select(language_dropdown)
+    language_select.select_by_value("CZ")
 
 
 
