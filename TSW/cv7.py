@@ -5,6 +5,15 @@ import time
 import dotenv
 import os
 
+
+def test_navigace():
+    about_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Browse")
+    about_link.click()
+    time.sleep(2)
+    assert "prohlizeni.html" in driver.current_url
+    print("Test navigace prošel.")
+
+
 dotenv.load_dotenv()
 driver = webdriver.Chrome()
 
@@ -30,11 +39,9 @@ try:
         raise Exception("Přihlášení selhalo.")
     print("Test přihlášení prošel.")
 
-    about_link = driver.find_element(By.LINK_TEXT, "Prohlížení")
-    about_link.click()
-    time.sleep(2)
-    assert "prohlizeni.html" in driver.current_url
-    print("Test navigace prošel.")
+
+
+
 except Exception as e:
     print("Test selhal:", str(e))
 finally:
