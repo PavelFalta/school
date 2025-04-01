@@ -80,9 +80,9 @@ try:
 
     #7. Ověřte, že v pravém seznamu oboru nachází obory: Ekonomika a management, Regionální rozvoj a veřejná správa, Sociální politika a sociální práce.
 
-    assert "Ekonomika a managemlolent" in driver.page_source
-    assert "Regionální rozvoj a veřejná správa" in driver.page_source
-    assert "Sociální politika a sociální práce" in driver.page_source
+    assert "Economics and Management" in driver.page_source
+    assert "Regional Development and Public Administration" in driver.page_source
+    assert "Social Policy and Social Work" in driver.page_source
 
     print("Test úspěšný.")
 
