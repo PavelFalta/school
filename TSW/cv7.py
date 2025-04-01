@@ -4,6 +4,7 @@ from selenium.webdriver.common.keys import Keys
 import time
 import dotenv
 import os
+from selenium.webdriver.support.ui import Select
 
 
 def test_navigace(driver):
@@ -48,6 +49,14 @@ try:
 
     podat_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Submit an application')]")
     podat_button.click()
+    time.sleep(1)
+
+    faculty_dropdown = driver.find_element(By.NAME, "fakulta")
+
+    select = Select(faculty_dropdown)
+
+    select.select_by_value("FSE")
+
     time.sleep(1)
 
 
