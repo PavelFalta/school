@@ -5,6 +5,7 @@ import time
 import dotenv
 import os
 from selenium.webdriver.support.ui import Select
+from time import perf_counter
 
 
 def test_navigace(driver):
@@ -37,15 +38,20 @@ username = os.getenv("STAG_USERNAME")
 password = os.getenv("STAG_PASSWORD")
 
 try:
-    
+    start = perf_counter()
     driver.get("https://portal.ujep.cz/")
+    end = perf_counter()
+    print(f"Načtení stránky trvalo {end - start:.2f} sekund.")
     
     test_prihlaseni(driver)
     print("Test přihlášení prošel.")
     test_navigace(driver)
     print("Test navigace prošel.")
 
+    start = perf_counter()
     driver.get("https://portal.ujep.cz/portal/studium/uchazec/eprihlaska.html")
+    end = perf_counter()
+    print(f"Načtení stránky trvalo {end - start:.2f} sekund.")
 
     podat_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Submit an application')]")
     podat_button.click()
@@ -75,6 +81,8 @@ try:
 
     search_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Search')]")
     search_button.click()
+
+    print("Výběr úspěsný...")
 
     time.sleep(1)
 
