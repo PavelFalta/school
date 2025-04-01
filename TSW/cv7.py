@@ -17,7 +17,7 @@ try:
     
     username_input = driver.find_element(By.NAME, "loginName")
     password_input = driver.find_element(By.NAME, "password")
-    
+
     
     username_input.send_keys(username)
     password_input.send_keys(password)
@@ -29,6 +29,12 @@ try:
     if "přihlášen" not in driver.page_source:
         raise Exception("Přihlášení selhalo.")
     print("Test přihlášení prošel.")
+
+    about_link = driver.find_element(By.LINK_TEXT, "Prohlížení")
+    about_link.click()
+    time.sleep(2)
+    assert "prohlizeni.html" in driver.current_url
+    print("Test navigace prošel.")
 except Exception as e:
     print("Test selhal:", str(e))
 finally:
