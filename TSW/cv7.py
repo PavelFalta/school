@@ -42,16 +42,25 @@ try:
     driver.get("https://portal.ujep.cz/")
     end = perf_counter()
     print(f"Načtení stránky trvalo {end - start:.2f} sekund.")
+
+    elements = driver.find_elements(By.XPATH, "//*[@aria-label]")
+    print(f"Počet ARIA prvků na stránce: {len(elements)}")
     
     test_prihlaseni(driver)
     print("Test přihlášení prošel.")
     test_navigace(driver)
     print("Test navigace prošel.")
 
+    elements = driver.find_elements(By.XPATH, "//*[@aria-label]")
+    print(f"Počet ARIA prvků na stránce: {len(elements)}")
+
     start = perf_counter()
     driver.get("https://portal.ujep.cz/portal/studium/uchazec/eprihlaska.html")
     end = perf_counter()
     print(f"Načtení stránky trvalo {end - start:.2f} sekund.")
+
+    elements = driver.find_elements(By.XPATH, "//*[@aria-label]")
+    print(f"Počet ARIA prvků na stránce: {len(elements)}")
 
     podat_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Submit an application')]")
     podat_button.click()
