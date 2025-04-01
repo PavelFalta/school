@@ -45,6 +45,11 @@ try:
     print("Test navigace prošel.")
 
     driver.get("https://portal.ujep.cz/portal/studium/uchazec/eprihlaska.html")
+    time.sleep(10)
+
+    podat_button = driver.find_element(By.PARTIAL_LINK_TEXT, "Submit")
+    podat_button.click()
+    time.sleep(1)
 
 
 
