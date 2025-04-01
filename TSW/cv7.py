@@ -9,9 +9,13 @@ from time import perf_counter
 
 
 def test_navigace(driver):
-    about_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Browse")
-    about_link.click()
-
+    try:
+        about_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Browse")
+        about_link.click()
+    except Exception as e:
+        browse_link = driver.find_element(By.XPATH, "//a[contains(text(), 'Browse IS/STAG') and contains(@class, 'collapsed')]")
+        browse_link.click()
+        print("Found and clicked Browse IS/STAG link via text content.")
     time.sleep(0.3)
 
     assert "prohlizeni.html" in driver.current_url
