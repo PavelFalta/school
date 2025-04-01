@@ -43,7 +43,13 @@ try:
     driver.get("https://portal.ujep.cz/")
     driver.set_window_size(500, 800)
 
-    
+    try:
+        burger_menu = driver.find_element(By.ID, "mobile_menu_display_btn")
+        burger_menu.click()
+        print("Burger menu found and clicked.")
+        time.sleep(3)  
+    except Exception as e:
+        print("Burger menu not found or not clickable:")
 
     end = perf_counter()
     print(f"Načtení stránky trvalo {end - start:.2f} sekund.")
