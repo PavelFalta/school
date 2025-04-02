@@ -1,5 +1,3 @@
-cesta = "data/data-recovery.csv"
-
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -7,50 +5,32 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
-import time
 import re
+import os
 
-# Load data - Načtení dat
-df = pd.read_csv(cesta)
-print("Velikost dat:", df.shape)
 
-# Identify all keypoints - Identifikace všech bodů
-vsechny_sloupce = df.columns
-vzor_bodu = re.compile(r'target_kp(\d+)_[xy]')
-shody_bodu = [vzor_bodu.match(sloupec) for sloupec in vsechny_sloupce]
-id_bodu = sorted(list(set([int(shoda.group(1)) for shoda in shody_bodu if shoda])))
+def nacist_data(cesta):
+    """Načte data z CSV souboru."""
+    return pd.read_csv(cesta)
 
-print(f"Nalezeno {len(id_bodu)} bodů: {id_bodu}")
 
-# Split data - Rozdělení dat
-indexy_radku = np.arange(len(df))
-trenovaci_indexy, testovaci_indexy = train_test_split(indexy_radku, test_size=0.2, random_state=42)
+def najit_body(df):
+    """Najde všechny klíčové body v datasetu pomocí regex."""
+    vsechny_sloupce = df.columns
+    vzor_bodu = re.compile(r'target_kp(\d+)_[xy]')
+    shody_bodu = [vzor_bodu.match(sloupec) for sloupec in vsechny_sloupce]
+    return sorted(list(set([int(shoda.group(1)) for shoda in shody_bodu if shoda])))
 
-# Set up results - Příprava výsledků
-vysledky = []
-skutecne_hodnoty = pd.DataFrame(index=testovaci_indexy)
-zakladni_hodnoty = pd.DataFrame(index=testovaci_indexy)  # baseline
-rf_hodnoty = pd.DataFrame(index=testovaci_indexy)       # random forest
 
-# Process each keypoint - Zpracování každého bodu
-cas_zacatek = time.time()
+def rozdelit_data(df, test_velikost=0.2):
+    """Rozdělí data na trénovací a testovací sadu."""
+    indexy_radku = np.arange(len(df))
+    return train_test_split(indexy_radku, test_size=test_velikost, random_state=42)
 
-for id_bod in id_bodu:
-    print(f"\n{'='*50}")
-    print(f"Zpracování bodu {id_bod}")
-    print(f"{'='*50}")
-    
+
+def vytvorit_zakladni_predikce(df, id_bod):
+    """Vytvoří základní predikce na základě nejvyšší váhy."""
     prefix_bodu = f"kp{id_bod}"
-    
-    # Extract target columns - Získání cílových sloupců
-    sloupec_y = f"target_{prefix_bodu}_y"
-    sloupec_x = f"target_{prefix_bodu}_x"
-    
-    # Store ground truth - Uložení skutečných hodnot
-    skutecne_hodnoty[f'{prefix_bodu}_y'] = df.loc[testovaci_indexy, sloupec_y].values
-    skutecne_hodnoty[f'{prefix_bodu}_x'] = df.loc[testovaci_indexy, sloupec_x].values
-    
-    # Calculate baseline - Výpočet základních hodnot (baseline)
     vahy_sloupce = [f'pred_{prefix_bodu}_val{i}' for i in range(5)]
     indexy_nejvyssi_vahy = np.argmax(df.loc[:, vahy_sloupce].values, axis=1)
     
@@ -62,237 +42,293 @@ for id_bod in id_bodu:
         zakladni_y[i] = df.iloc[i][f'pred_{prefix_bodu}_pos{idx}_y']
         zakladni_x[i] = df.iloc[i][f'pred_{prefix_bodu}_pos{idx}_x']
     
-    # Store baseline - Uložení základních hodnot
-    zakladni_hodnoty[f'{prefix_bodu}_y'] = zakladni_y[testovaci_indexy]
-    zakladni_hodnoty[f'{prefix_bodu}_x'] = zakladni_x[testovaci_indexy]
-    
-    # Create features - Vytvoření příznaků
+    return zakladni_y, zakladni_x
+
+
+def vytvorit_priznaky(df, id_bod):
+    """Vytvoří příznakové vektory pro daný bod."""
+    prefix_bodu = f"kp{id_bod}"
     priznaky_sloupce = []
     
-    # Position predictions - Predikce pozic
+    # Predikce pozic
     for i in range(5):
         priznaky_sloupce.extend([f'pred_{prefix_bodu}_pos{i}_y', f'pred_{prefix_bodu}_pos{i}_x'])
     
-    # Weight values - Hodnoty vah
+    # Hodnoty vah
     priznaky_sloupce.extend([f'pred_{prefix_bodu}_val{i}' for i in range(5)])
     
-    # Centroid and sigma - Centroid a sigma
+    # Centroid a sigma
     priznaky_sloupce.extend([
         f'pred_{prefix_bodu}_centroid_y', f'pred_{prefix_bodu}_centroid_x',
         f'pred_{prefix_bodu}_sigma_y', f'pred_{prefix_bodu}_sigma_x'
     ])
     
-    # Extract and scale features - Extrakce a škálování příznaků
+    return priznaky_sloupce
+
+
+def trenovat_model(X_trenovaci, y_trenovaci):
+    """Natrénuje model Random Forest."""
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_trenovaci, y_trenovaci)
+    return model
+
+
+def zpracovat_bod(df, id_bod, trenovaci_indexy, testovaci_indexy):
+    """Zpracuje jeden klíčový bod - trénování a predikce."""
+    prefix_bodu = f"kp{id_bod}"
+    
+    # Získání cílových sloupců
+    sloupec_y = f"target_{prefix_bodu}_y"
+    sloupec_x = f"target_{prefix_bodu}_x"
+    
+    # Uložení skutečných hodnot
+    skutecne_y = df.loc[testovaci_indexy, sloupec_y].values
+    skutecne_x = df.loc[testovaci_indexy, sloupec_x].values
+    
+    # Získání základních predikcí
+    zakladni_y, zakladni_x = vytvorit_zakladni_predikce(df, id_bod)
+    
+    # Vytvoření a škálování příznaků
+    priznaky_sloupce = vytvorit_priznaky(df, id_bod)
     X = df[priznaky_sloupce].values
     skaler = StandardScaler()
     X_skalovane = skaler.fit_transform(X)
     
-    # Split into train and test - Rozdělení na trénovací a testovací sadu
     X_trenovaci = X_skalovane[trenovaci_indexy]
     X_testovaci = X_skalovane[testovaci_indexy]
     
     y_trenovaci_y = df.loc[trenovaci_indexy, sloupec_y].values
     y_trenovaci_x = df.loc[trenovaci_indexy, sloupec_x].values
     
-    y_testovaci_y = df.loc[testovaci_indexy, sloupec_y].values
-    y_testovaci_x = df.loc[testovaci_indexy, sloupec_x].values
+    # Trénování modelů
+    model_y = trenovat_model(X_trenovaci, y_trenovaci_y)
+    model_x = trenovat_model(X_trenovaci, y_trenovaci_x)
     
-    # Train Random Forest - Trénování náhodného lesa
-    print(f"Trénování náhodného lesa pro souřadnici Y bodu {prefix_bodu}...")
-    rf_y = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_y.fit(X_trenovaci, y_trenovaci_y)
+    # Vytvoření predikcí
+    rf_predikce_y = model_y.predict(X_testovaci)
+    rf_predikce_x = model_x.predict(X_testovaci)
     
-    print(f"Trénování náhodného lesa pro souřadnici X bodu {prefix_bodu}...")
-    rf_x = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_x.fit(X_trenovaci, y_trenovaci_x)
-    
-    # Make predictions - Vytvoření predikcí
-    rf_predikce_y = rf_y.predict(X_testovaci)
-    rf_predikce_x = rf_x.predict(X_testovaci)
-    
-    # Store Random Forest predictions - Uložení predikcí náhodného lesa
-    rf_hodnoty[f'{prefix_bodu}_y'] = rf_predikce_y
-    rf_hodnoty[f'{prefix_bodu}_x'] = rf_predikce_x
-    
-    # Calculate MSE - Výpočet střední kvadratické chyby
+    # Sestavení výstupu
+    return {
+        'skutecne_y': skutecne_y,
+        'skutecne_x': skutecne_x,
+        'zakladni_y': zakladni_y[testovaci_indexy],
+        'zakladni_x': zakladni_x[testovaci_indexy],
+        'rf_y': rf_predikce_y,
+        'rf_x': rf_predikce_x,
+        'model_y': model_y,
+        'model_x': model_x
+    }
+
+
+def vypocitat_mse(predikce):
+    """Vypočítá MSE pro skutečné vs. predikované hodnoty."""
     zakladni_mse = mean_squared_error(
-        np.column_stack((y_testovaci_y, y_testovaci_x)),
-        np.column_stack((zakladni_y[testovaci_indexy], zakladni_x[testovaci_indexy]))
+        np.column_stack((predikce['skutecne_y'], predikce['skutecne_x'])),
+        np.column_stack((predikce['zakladni_y'], predikce['zakladni_x']))
     )
     
     rf_mse = mean_squared_error(
-        np.column_stack((y_testovaci_y, y_testovaci_x)),
-        np.column_stack((rf_predikce_y, rf_predikce_x))
+        np.column_stack((predikce['skutecne_y'], predikce['skutecne_x'])),
+        np.column_stack((predikce['rf_y'], predikce['rf_x']))
     )
     
-    # Calculate improvement - Výpočet zlepšení
-    zlepseni = 100 * (zakladni_mse - rf_mse) / zakladni_mse
-    
-    print(f"Základní MSE: {zakladni_mse:.4f}")
-    print(f"RF MSE: {rf_mse:.4f}")
-    print(f"Zlepšení: {zlepseni:.2f}%")
-    
-    # Show feature importance - Zobrazení důležitosti příznaků
-    dulezitost_priznaku = pd.DataFrame({
-        'Příznak': priznaky_sloupce,
-        'Důležitost Y': rf_y.feature_importances_,
-        'Důležitost X': rf_x.feature_importances_
-    }).sort_values(by='Důležitost Y', ascending=False)
-    
-    print("\nTop 5 příznaků pro Y:")
-    print(dulezitost_priznaku[['Příznak', 'Důležitost Y']].head(5))
-    
-    print("\nTop 5 příznaků pro X:")
-    print(dulezitost_priznaku[['Příznak', 'Důležitost X']].sort_values(by='Důležitost X', ascending=False).head(5))
-    
-    # Store results - Uložení výsledků
-    vysledky.append({
-        'id_bod': id_bod,
-        'zakladni_mse': zakladni_mse,
-        'rf_mse': rf_mse,
-        'zlepseni': zlepseni,
-        'dulezitost_priznaku': dulezitost_priznaku
-    })
+    return zakladni_mse, rf_mse
 
-celkovy_cas = time.time() - cas_zacatek
-print(f"\nCelkový čas zpracování: {celkovy_cas:.2f} sekund")
 
-# Calculate overall MSE - Výpočet celkové střední kvadratické chyby
-def vypocet_celkove_mse(pravdive_df, predikce_df):
-    pravdive_hodnoty = []
-    predikovane_hodnoty = []
+def vypocitat_celkove_mse(vysledky_bodu, id_bodu, testovaci_indexy):
+    """Vypočítá celkové MSE napříč všemi body."""
+    skutecne_hodnoty = pd.DataFrame(index=testovaci_indexy)
+    zakladni_hodnoty = pd.DataFrame(index=testovaci_indexy)
+    rf_hodnoty = pd.DataFrame(index=testovaci_indexy)
     
     for id_bod in id_bodu:
         prefix_bodu = f"kp{id_bod}"
-        pravdive_hodnoty.append(pravdive_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
-        predikovane_hodnoty.append(predikce_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
+        predikce = vysledky_bodu[id_bod]
+        
+        skutecne_hodnoty[f'{prefix_bodu}_y'] = predikce['skutecne_y']
+        skutecne_hodnoty[f'{prefix_bodu}_x'] = predikce['skutecne_x']
+        
+        zakladni_hodnoty[f'{prefix_bodu}_y'] = predikce['zakladni_y']
+        zakladni_hodnoty[f'{prefix_bodu}_x'] = predikce['zakladni_x']
+        
+        rf_hodnoty[f'{prefix_bodu}_y'] = predikce['rf_y']
+        rf_hodnoty[f'{prefix_bodu}_x'] = predikce['rf_x']
     
-    pravdive_hodnoty = np.concatenate(pravdive_hodnoty, axis=1)
-    predikovane_hodnoty = np.concatenate(predikovane_hodnoty, axis=1)
+    def vypocet_celkove_mse(pravdive_df, predikce_df):
+        pravdive_hodnoty = []
+        predikovane_hodnoty = []
+        
+        for id_bod in id_bodu:
+            prefix_bodu = f"kp{id_bod}"
+            pravdive_hodnoty.append(pravdive_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
+            predikovane_hodnoty.append(predikce_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
+        
+        pravdive_hodnoty = np.concatenate(pravdive_hodnoty, axis=1)
+        predikovane_hodnoty = np.concatenate(predikovane_hodnoty, axis=1)
+        
+        return mean_squared_error(pravdive_hodnoty, predikovane_hodnoty)
     
-    return mean_squared_error(pravdive_hodnoty, predikovane_hodnoty)
-
-celkova_zakladni_mse = vypocet_celkove_mse(skutecne_hodnoty, zakladni_hodnoty)
-celkova_rf_mse = vypocet_celkove_mse(skutecne_hodnoty, rf_hodnoty)
-celkove_zlepseni = 100 * (celkova_zakladni_mse - celkova_rf_mse) / celkova_zakladni_mse
-
-print("\nCelkové výsledky:")
-print(f"Základní MSE: {celkova_zakladni_mse:.4f}")
-print(f"RF MSE: {celkova_rf_mse:.4f}")
-print(f"Celkové zlepšení: {celkove_zlepseni:.2f}%")
-
-# Create summary DataFrame - Vytvoření souhrnné tabulky
-vysledky_df = pd.DataFrame([{
-    'Bod': r['id_bod'],
-    'Základní MSE': r['zakladni_mse'],
-    'RF MSE': r['rf_mse'],
-    'Zlepšení (%)': r['zlepseni']
-} for r in vysledky])
-
-print("\nVýsledky podle bodů:")
-print(vysledky_df)
-
-# Visualize results - Vizualizace výsledků
-plt.figure(figsize=(15, 6))
-
-# Plot MSE comparison - Graf srovnání MSE
-plt.subplot(1, 2, 1)
-index = np.arange(len(id_bodu))
-sirka = 0.35
-
-plt.bar(index - sirka/2, vysledky_df['Základní MSE'], sirka, label='Základní model', color='red', alpha=0.7)
-plt.bar(index + sirka/2, vysledky_df['RF MSE'], sirka, label='Náhodný les', color='green', alpha=0.7)
-
-plt.xlabel('ID bodu')
-plt.ylabel('MSE')
-plt.title('Střední kvadratická chyba podle bodu')
-plt.xticks(index, vysledky_df['Bod'].astype(str))
-plt.legend()
-plt.grid(axis='y', alpha=0.3)
-
-# Plot improvement percentage - Graf procenta zlepšení
-plt.subplot(1, 2, 2)
-plt.bar(vysledky_df['Bod'].astype(str), vysledky_df['Zlepšení (%)'], color='blue')
-plt.xlabel('ID bodu')
-plt.ylabel('Zlepšení (%)')
-plt.title('Zlepšení náhodného lesa oproti základnímu modelu')
-plt.grid(axis='y', alpha=0.3)
-
-plt.tight_layout()
-plt.show()
-
-# Visualize sample rows - Vizualizace ukázkových řádků
-plt.figure(figsize=(15, 10))
-
-# Select random sample rows - Výběr náhodných ukázkových řádků
-ukazkove_indexy = np.random.choice(testovaci_indexy, min(6, len(testovaci_indexy)), replace=False)
-
-for i, idx in enumerate(ukazkove_indexy, 1):
-    plt.subplot(2, 3, i)
+    celkova_zakladni_mse = vypocet_celkove_mse(skutecne_hodnoty, zakladni_hodnoty)
+    celkova_rf_mse = vypocet_celkove_mse(skutecne_hodnoty, rf_hodnoty)
     
-    # Plot each keypoint - Vykreslení každého bodu
+    return celkova_zakladni_mse, celkova_rf_mse, skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty
+
+
+def zobrazit_vysledky(vysledky_bodu, id_bodu, testovaci_indexy):
+    """Vytváří a zobrazuje grafy výsledků."""
+    # Připrava dat pro grafy
+    data_grafu = []
+    for id_bod in id_bodu:
+        predikce = vysledky_bodu[id_bod]
+        zakladni_mse, rf_mse = vypocitat_mse(predikce)
+        data_grafu.append({
+            'Bod': id_bod,
+            'Základní MSE': zakladni_mse,
+            'RF MSE': rf_mse,
+            'Zlepšení (%)': 100 * (zakladni_mse - rf_mse) / zakladni_mse
+        })
+    
+    vysledky_df = pd.DataFrame(data_grafu)
+    
+    # Výpočet celkového MSE
+    celkova_zakladni_mse, celkova_rf_mse, skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty = vypocitat_celkove_mse(
+        vysledky_bodu, id_bodu, testovaci_indexy
+    )
+    
+    # Graf srovnání MSE a zlepšení
+    plt.figure(figsize=(15, 6))
+    
+    # Graf MSE
+    plt.subplot(1, 2, 1)
+    index = np.arange(len(id_bodu))
+    sirka = 0.35
+    
+    plt.bar(index - sirka/2, vysledky_df['Základní MSE'], sirka, label='Základní model', color='red', alpha=0.7)
+    plt.bar(index + sirka/2, vysledky_df['RF MSE'], sirka, label='Náhodný les', color='green', alpha=0.7)
+    
+    plt.xlabel('ID bodu')
+    plt.ylabel('MSE')
+    plt.title('Střední kvadratická chyba podle bodu')
+    plt.xticks(index, vysledky_df['Bod'].astype(str))
+    plt.legend()
+    plt.grid(axis='y', alpha=0.3)
+    
+    # Graf zlepšení
+    plt.subplot(1, 2, 2)
+    plt.bar(vysledky_df['Bod'].astype(str), vysledky_df['Zlepšení (%)'], color='blue')
+    plt.xlabel('ID bodu')
+    plt.ylabel('Zlepšení (%)')
+    plt.title('Zlepšení náhodného lesa oproti základnímu modelu')
+    plt.grid(axis='y', alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig("vysledky_mse.png")
+    plt.close()
+    
+    # Zobrazení ukázkových bodů
+    plt.figure(figsize=(15, 10))
+    
+    # Výběr náhodných ukázkových řádků
+    ukazkove_indexy = np.random.choice(testovaci_indexy, min(6, len(testovaci_indexy)), replace=False)
+    
+    for i, idx in enumerate(ukazkove_indexy, 1):
+        plt.subplot(2, 3, i)
+        
+        # Vykreslení každého bodu
+        for id_bod in id_bodu:
+            prefix_bodu = f"kp{id_bod}"
+            
+            # Získání pozic
+            skutecna_y = skutecne_hodnoty.loc[idx, f'{prefix_bodu}_y']
+            skutecna_x = skutecne_hodnoty.loc[idx, f'{prefix_bodu}_x']
+            
+            zakladni_y = zakladni_hodnoty.loc[idx, f'{prefix_bodu}_y']
+            zakladni_x = zakladni_hodnoty.loc[idx, f'{prefix_bodu}_x']
+            
+            rf_y = rf_hodnoty.loc[idx, f'{prefix_bodu}_y']
+            rf_x = rf_hodnoty.loc[idx, f'{prefix_bodu}_x']
+            
+            # Vykreslení pozic
+            plt.scatter(skutecna_x, skutecna_y, color='blue', marker='o', s=80, 
+                       label='Skutečná' if id_bod == id_bodu[0] else "")
+            plt.scatter(zakladni_x, zakladni_y, color='red', marker='s', s=50, 
+                       label='Základní' if id_bod == id_bodu[0] else "")
+            plt.scatter(rf_x, rf_y, color='green', marker='^', s=50, 
+                       label='Náhodný les' if id_bod == id_bodu[0] else "")
+            
+            # Vykreslení čar
+            plt.plot([skutecna_x, zakladni_x], [skutecna_y, zakladni_y], 'r-', alpha=0.3)
+            plt.plot([skutecna_x, rf_x], [skutecna_y, rf_y], 'g-', alpha=0.3)
+            
+            # Popis ID bodu
+            plt.annotate(str(id_bod), (skutecna_x, skutecna_y), fontsize=8, ha='right')
+        
+        plt.title(f'Řádek {idx}')
+        plt.xlabel('Souřadnice X')
+        plt.ylabel('Souřadnice Y')
+        if i == 1:
+            plt.legend()
+        plt.grid(True)
+        plt.axis('equal')
+    
+    plt.suptitle('Skutečné vs. predikované pozice bodů', fontsize=16)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.9)
+    plt.savefig("ukazkove_predikce.png")
+    plt.close()
+    
+    return skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty
+
+
+def ulozit_predikce(skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty, id_bodu, vystupni_cesta):
+    """Uloží predikce do CSV souboru."""
+    vysledky_df = pd.DataFrame(index=skutecne_hodnoty.index)
+    
     for id_bod in id_bodu:
         prefix_bodu = f"kp{id_bod}"
         
-        # Get positions - Získání pozic
-        skutecna_y = skutecne_hodnoty.loc[idx, f'{prefix_bodu}_y']
-        skutecna_x = skutecne_hodnoty.loc[idx, f'{prefix_bodu}_x']
+        # Skutečné hodnoty
+        vysledky_df[f'skutecna_{prefix_bodu}_y'] = skutecne_hodnoty[f'{prefix_bodu}_y']
+        vysledky_df[f'skutecna_{prefix_bodu}_x'] = skutecne_hodnoty[f'{prefix_bodu}_x']
         
-        zakladni_y = zakladni_hodnoty.loc[idx, f'{prefix_bodu}_y']
-        zakladni_x = zakladni_hodnoty.loc[idx, f'{prefix_bodu}_x']
+        # Základní predikce
+        vysledky_df[f'zakladni_{prefix_bodu}_y'] = zakladni_hodnoty[f'{prefix_bodu}_y']
+        vysledky_df[f'zakladni_{prefix_bodu}_x'] = zakladni_hodnoty[f'{prefix_bodu}_x']
         
-        rf_y = rf_hodnoty.loc[idx, f'{prefix_bodu}_y']
-        rf_x = rf_hodnoty.loc[idx, f'{prefix_bodu}_x']
-        
-        # Plot positions - Vykreslení pozic
-        plt.scatter(skutecna_x, skutecna_y, color='blue', marker='o', s=80, label='Skutečná' if id_bod == id_bodu[0] else "")
-        plt.scatter(zakladni_x, zakladni_y, color='red', marker='s', s=50, label='Základní' if id_bod == id_bodu[0] else "")
-        plt.scatter(rf_x, rf_y, color='green', marker='^', s=50, label='Náhodný les' if id_bod == id_bodu[0] else "")
-        
-        # Draw lines - Vykreslení čar
-        plt.plot([skutecna_x, zakladni_x], [skutecna_y, zakladni_y], 'r-', alpha=0.3)
-        plt.plot([skutecna_x, rf_x], [skutecna_y, rf_y], 'g-', alpha=0.3)
-        
-        # Annotate keypoint id - Popis ID bodu
-        plt.annotate(str(id_bod), (skutecna_x, skutecna_y), fontsize=8, ha='right')
+        # Predikce náhodného lesa
+        vysledky_df[f'rf_{prefix_bodu}_y'] = rf_hodnoty[f'{prefix_bodu}_y']
+        vysledky_df[f'rf_{prefix_bodu}_x'] = rf_hodnoty[f'{prefix_bodu}_x']
     
-    plt.title(f'Řádek {idx}')
-    plt.xlabel('Souřadnice X')
-    plt.ylabel('Souřadnice Y')
-    if i == 1:
-        plt.legend()
-    plt.grid(True)
-    plt.axis('equal')
+    # Ujistíme se, že existuje adresář pro výstup
+    os.makedirs(os.path.dirname(vystupni_cesta), exist_ok=True)
+    vysledky_df.to_csv(vystupni_cesta)
 
-plt.suptitle('Skutečné vs. predikované pozice bodů', fontsize=16)
-plt.tight_layout()
-plt.subplots_adjust(top=0.9)
-plt.show()
 
-# Save predictions to CSV - Uložení predikcí do CSV
-vysledky_df = pd.DataFrame(index=testovaci_indexy)
-
-# Add predictions to result dataframe - Přidání predikcí do výsledné tabulky
-for id_bod in id_bodu:
-    prefix_bodu = f"kp{id_bod}"
+def predikce_bodu(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu.csv"):
+    """Hlavní funkce pro zpracování a predikci všech bodů."""
+    # Načtení dat
+    df = nacist_data(cesta_vstup)
     
-    # True values - Skutečné hodnoty
-    vysledky_df[f'skutecna_{prefix_bodu}_y'] = skutecne_hodnoty[f'{prefix_bodu}_y']
-    vysledky_df[f'skutecna_{prefix_bodu}_x'] = skutecne_hodnoty[f'{prefix_bodu}_x']
+    # Nalezení ID bodů
+    id_bodu = najit_body(df)
     
-    # Baseline predictions - Základní predikce
-    vysledky_df[f'zakladni_{prefix_bodu}_y'] = zakladni_hodnoty[f'{prefix_bodu}_y']
-    vysledky_df[f'zakladni_{prefix_bodu}_x'] = zakladni_hodnoty[f'{prefix_bodu}_x']
+    # Rozdělení dat
+    trenovaci_indexy, testovaci_indexy = rozdelit_data(df)
     
-    # Random Forest predictions - Predikce náhodného lesa
-    vysledky_df[f'rf_{prefix_bodu}_y'] = rf_hodnoty[f'{prefix_bodu}_y']
-    vysledky_df[f'rf_{prefix_bodu}_x'] = rf_hodnoty[f'{prefix_bodu}_x']
+    # Zpracování každého bodu
+    vysledky_bodu = {}
+    for id_bod in id_bodu:
+        vysledky_bodu[id_bod] = zpracovat_bod(df, id_bod, trenovaci_indexy, testovaci_indexy)
+    
+    # Zobrazení výsledků
+    skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty = zobrazit_vysledky(vysledky_bodu, id_bodu, testovaci_indexy)
+    
+    # Uložení predikcí
+    ulozit_predikce(skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty, id_bodu, cesta_vystup)
+    
+    return vysledky_bodu
 
-# Save to CSV - Uložení do CSV
-vystupni_cesta = "data/predikce_bodu.csv"
-vysledky_df.to_csv(vystupni_cesta)
-print(f"\nPredikce uloženy do {vystupni_cesta}")
 
-# Display sample predictions - Zobrazení ukázkových predikcí
-print("\nUkázkové predikce:")
-print(vysledky_df.head())
+if __name__ == "__main__":
+    predikce_bodu()
