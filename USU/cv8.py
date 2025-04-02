@@ -367,17 +367,29 @@ for i, idx in enumerate(sample_indices, 1):
         true_y = y_true.loc[idx, f'{kp_prefix}_y']
         true_x = y_true.loc[idx, f'{kp_prefix}_x']
         
-        pred_y = y_ensemble.loc[idx, f'{kp_prefix}_y']
-        pred_x = y_ensemble.loc[idx, f'{kp_prefix}_x']
+        # Get ensemble predictions
+        ensemble_y = y_ensemble.loc[idx, f'{kp_prefix}_y']
+        ensemble_x = y_ensemble.loc[idx, f'{kp_prefix}_x']
+        
+        # Get weighted average predictions
+        weighted_y = y_weighted.loc[idx, f'{kp_prefix}_y']
+        weighted_x = y_weighted.loc[idx, f'{kp_prefix}_x']
         
         # Plot true position
-        plt.scatter(true_x, true_y, color='blue', s=80, label='True' if kp_id == keypoint_ids[0] else "")
+        plt.scatter(true_x, true_y, color='blue', s=80, marker='o', 
+                   label='True' if kp_id == keypoint_ids[0] else "")
         
-        # Plot predicted position
-        plt.scatter(pred_x, pred_y, color='red', s=50, label='Predicted' if kp_id == keypoint_ids[0] else "")
+        # Plot weighted average prediction
+        plt.scatter(weighted_x, weighted_y, color='green', s=50, marker='s',
+                   label='Weighted Avg' if kp_id == keypoint_ids[0] else "")
         
-        # Draw line between them
-        plt.plot([true_x, pred_x], [true_y, pred_y], 'k-', alpha=0.3)
+        # Plot ensemble prediction
+        plt.scatter(ensemble_x, ensemble_y, color='red', s=50, marker='^',
+                   label='Ensemble' if kp_id == keypoint_ids[0] else "")
+        
+        # Draw lines between true and predictions
+        plt.plot([true_x, ensemble_x], [true_y, ensemble_y], 'r-', alpha=0.3)
+        plt.plot([true_x, weighted_x], [true_y, weighted_y], 'g-', alpha=0.3)
         
         # Annotate keypoint id
         plt.annotate(str(kp_id), (true_x, true_y), fontsize=8, ha='right')
