@@ -26,7 +26,7 @@ print(y_data.head())
 Y = y_data[["target_kp0_y", "target_kp0_x"]]
 X = y_data.drop(columns=["target_kp0_y", "target_kp0_x", 
                         #  "pred_kp0_centroid_y", "pred_kp0_centroid_x", 
-                         "pred_kp0_sigma_y", "pred_kp0_sigma_x", 
+                        #  "pred_kp0_sigma_y", "pred_kp0_sigma_x", 
                          "pred_kp0_pos1_y", "pred_kp0_pos1_x", 
                          "pred_kp0_pos2_y", "pred_kp0_pos2_x", 
                          "pred_kp0_pos3_y", "pred_kp0_pos3_x", 
