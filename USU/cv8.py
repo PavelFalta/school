@@ -10,244 +10,244 @@ import time
 from tqdm import tqdm
 
 
-def nacist_data(cesta):
+def nacti_data(cesta):
     """Načte data z CSV souboru."""
     print(f"Načítání dat z {cesta}...")
     return pd.read_csv(cesta)
 
 
-def najit_body(df):
+def najdi_body(df):
     """Najde všechny klíčové body v datasetu pomocí regex."""
     vsechny_sloupce = df.columns
-    vzor_bodu = re.compile(r'target_kp(\d+)_[xy]')
-    shody_bodu = [vzor_bodu.match(sloupec) for sloupec in vsechny_sloupce]
-    id_bodu = sorted(list(set([int(shoda.group(1)) for shoda in shody_bodu if shoda])))
-    print(f"Nalezeno {len(id_bodu)} bodů: {id_bodu}")
-    return id_bodu
+    bod_regex = re.compile(r'target_kp(\d+)_[xy]')
+    body_shody = [bod_regex.match(sloupec) for sloupec in vsechny_sloupce]
+    cisla_bodu = sorted(list(set([int(shoda.group(1)) for shoda in body_shody if shoda])))
+    print(f"Nalezeno {len(cisla_bodu)} bodů: {cisla_bodu}")
+    return cisla_bodu
 
 
-def rozdelit_data(df, test_velikost=0.2):
+def rozdel_data(df, test_velikost=0.2):
     """Rozdělí data na trénovací a testovací sadu."""
-    indexy_radku = np.arange(len(df))
-    trenovaci_indexy, testovaci_indexy = train_test_split(indexy_radku, test_size=test_velikost, random_state=42)
-    print(f"Data rozdělena: {len(trenovaci_indexy)} trénovacích vzorků, {len(testovaci_indexy)} testovacích vzorků")
-    return trenovaci_indexy, testovaci_indexy
+    radky_indexy = np.arange(len(df))
+    train_idx, test_idx = train_test_split(radky_indexy, test_size=test_velikost, random_state=42)
+    print(f"Data rozdělena: {len(train_idx)} trénovacích vzorků, {len(test_idx)} testovacích vzorků")
+    return train_idx, test_idx
 
 
-def vytvorit_zakladni_predikce(df, id_bod):
+def udel_zakladni_predikce(df, cislo_bodu):
     """Vytvoří predikce na základě bodu s nejvyšší vahou."""
-    prefix_bodu = f"kp{id_bod}"
-    vahy_sloupce = [f'pred_{prefix_bodu}_val{i}' for i in range(5)]
-    indexy_nejvyssi_vahy = np.argmax(df.loc[:, vahy_sloupce].values, axis=1)
+    prefix = f"kp{cislo_bodu}"
+    sloupce_vah = [f'pred_{prefix}_val{i}' for i in range(5)]
+    idx_max_vahy = np.argmax(df.loc[:, sloupce_vah].values, axis=1)
     
-    zakladni_y = np.zeros(len(df))
-    zakladni_x = np.zeros(len(df))
+    y_zaklad = np.zeros(len(df))
+    x_zaklad = np.zeros(len(df))
     
     for i in range(len(df)):
-        idx = indexy_nejvyssi_vahy[i]
-        zakladni_y[i] = df.iloc[i][f'pred_{prefix_bodu}_pos{idx}_y']
-        zakladni_x[i] = df.iloc[i][f'pred_{prefix_bodu}_pos{idx}_x']
+        idx = idx_max_vahy[i]
+        y_zaklad[i] = df.iloc[i][f'pred_{prefix}_pos{idx}_y']
+        x_zaklad[i] = df.iloc[i][f'pred_{prefix}_pos{idx}_x']
     
-    return zakladni_y, zakladni_x
+    return y_zaklad, x_zaklad
 
 
-def vytvorit_priznaky(df, id_bod):
+def udel_priznaky(df, cislo_bodu):
     """Vytvoří příznakové vektory pro daný bod."""
-    prefix_bodu = f"kp{id_bod}"
-    priznaky_sloupce = []
+    prefix = f"kp{cislo_bodu}"
+    sloupce_priznaku = []
     
     #tady beru predikce pozic
     for i in range(5):
-        priznaky_sloupce.extend([f'pred_{prefix_bodu}_pos{i}_y', f'pred_{prefix_bodu}_pos{i}_x'])
+        sloupce_priznaku.extend([f'pred_{prefix}_pos{i}_y', f'pred_{prefix}_pos{i}_x'])
     
     #sem jdou vahy
-    priznaky_sloupce.extend([f'pred_{prefix_bodu}_val{i}' for i in range(5)])
+    sloupce_priznaku.extend([f'pred_{prefix}_val{i}' for i in range(5)])
     
     #centroid a sigma nakonec
-    priznaky_sloupce.extend([
-        f'pred_{prefix_bodu}_centroid_y', f'pred_{prefix_bodu}_centroid_x',
-        f'pred_{prefix_bodu}_sigma_y', f'pred_{prefix_bodu}_sigma_x'
+    sloupce_priznaku.extend([
+        f'pred_{prefix}_centroid_y', f'pred_{prefix}_centroid_x',
+        f'pred_{prefix}_sigma_y', f'pred_{prefix}_sigma_x'
     ])
     
-    return priznaky_sloupce
+    return sloupce_priznaku
 
 
-def trenovat_model(X_trenovaci, y_trenovaci):
+def trenuj_model(X_train, y_train):
     """Natrénuje model Random Forest."""
     model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_trenovaci, y_trenovaci)
+    model.fit(X_train, y_train)
     return model
 
 
-def zpracovat_bod(df, id_bod, trenovaci_indexy, testovaci_indexy):
+def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
     """Zpracuje jeden klíčový bod - trénování a predikce."""
-    prefix_bodu = f"kp{id_bod}"
+    prefix = f"kp{cislo_bodu}"
     
     #najdu cilovy sloupecky
-    sloupec_y = f"target_{prefix_bodu}_y"
-    sloupec_x = f"target_{prefix_bodu}_x"
+    y_sloupec = f"target_{prefix}_y"
+    x_sloupec = f"target_{prefix}_x"
     
     #ulozim si skutecny hodnoty
-    skutecne_y = df.loc[testovaci_indexy, sloupec_y].values
-    skutecne_x = df.loc[testovaci_indexy, sloupec_x].values
+    y_pravda = df.loc[test_idx, y_sloupec].values
+    x_pravda = df.loc[test_idx, x_sloupec].values
     
     #tady ziskam zakladni predikce
-    zakladni_y, zakladni_x = vytvorit_zakladni_predikce(df, id_bod)
+    y_zaklad, x_zaklad = udel_zakladni_predikce(df, cislo_bodu)
     
     #vytvori a oskaluje priznaky
-    priznaky_sloupce = vytvorit_priznaky(df, id_bod)
-    X = df[priznaky_sloupce].values
-    skaler = StandardScaler()
-    X_skalovane = skaler.fit_transform(X)
+    sloupce_priznaku = udel_priznaky(df, cislo_bodu)
+    X = df[sloupce_priznaku].values
+    skalovac = StandardScaler()
+    X_skalovane = skalovac.fit_transform(X)
     
-    X_trenovaci = X_skalovane[trenovaci_indexy]
-    X_testovaci = X_skalovane[testovaci_indexy]
+    X_train = X_skalovane[train_idx]
+    X_test = X_skalovane[test_idx]
     
-    y_trenovaci_y = df.loc[trenovaci_indexy, sloupec_y].values
-    y_trenovaci_x = df.loc[trenovaci_indexy, sloupec_x].values
+    y_train_y = df.loc[train_idx, y_sloupec].values
+    y_train_x = df.loc[train_idx, x_sloupec].values
     
     #trenuju modely
-    model_y = trenovat_model(X_trenovaci, y_trenovaci_y)
-    model_x = trenovat_model(X_trenovaci, y_trenovaci_x)
+    y_model = trenuj_model(X_train, y_train_y)
+    x_model = trenuj_model(X_train, y_train_x)
     
     #tedka udelam predikce
-    rf_predikce_y = model_y.predict(X_testovaci)
-    rf_predikce_x = model_x.predict(X_testovaci)
+    y_pred_rf = y_model.predict(X_test)
+    x_pred_rf = x_model.predict(X_test)
     
     #vratim vysledky v slovniku
     return {
-        'skutecne_y': skutecne_y,
-        'skutecne_x': skutecne_x,
-        'zakladni_y': zakladni_y[testovaci_indexy],
-        'zakladni_x': zakladni_x[testovaci_indexy],
-        'rf_y': rf_predikce_y,
-        'rf_x': rf_predikce_x,
-        'model_y': model_y,
-        'model_x': model_x
+        'y_pravda': y_pravda,
+        'x_pravda': x_pravda,
+        'y_zaklad': y_zaklad[test_idx],
+        'x_zaklad': x_zaklad[test_idx],
+        'y_rf': y_pred_rf,
+        'x_rf': x_pred_rf,
+        'y_model': y_model,
+        'x_model': x_model
     }
 
 
-def vypocitat_mse(predikce):
+def spocti_mse(predikce):
     """Vypočítá MSE pro skutečné vs. predikované hodnoty."""
-    zakladni_mse = mean_squared_error(
-        np.column_stack((predikce['skutecne_y'], predikce['skutecne_x'])),
-        np.column_stack((predikce['zakladni_y'], predikce['zakladni_x']))
+    mse_zaklad = mean_squared_error(
+        np.column_stack((predikce['y_pravda'], predikce['x_pravda'])),
+        np.column_stack((predikce['y_zaklad'], predikce['x_zaklad']))
     )
     
-    rf_mse = mean_squared_error(
-        np.column_stack((predikce['skutecne_y'], predikce['skutecne_x'])),
-        np.column_stack((predikce['rf_y'], predikce['rf_x']))
+    mse_rf = mean_squared_error(
+        np.column_stack((predikce['y_pravda'], predikce['x_pravda'])),
+        np.column_stack((predikce['y_rf'], predikce['x_rf']))
     )
     
-    return zakladni_mse, rf_mse
+    return mse_zaklad, mse_rf
 
 
-def vypocitat_chyby(vysledky_bodu, id_bodu, testovaci_indexy):
+def spocti_chyby(vysledky, cisla_bodu, test_idx):
     """Vypočítá chyby pro každý bod a každou metodu."""
-    skutecne_hodnoty = pd.DataFrame(index=testovaci_indexy)
-    zakladni_hodnoty = pd.DataFrame(index=testovaci_indexy)
-    rf_hodnoty = pd.DataFrame(index=testovaci_indexy)
-    zakladni_chyby = pd.DataFrame(index=testovaci_indexy)
-    rf_chyby = pd.DataFrame(index=testovaci_indexy)
+    pravdive_hodnoty = pd.DataFrame(index=test_idx)
+    zakladni_hodnoty = pd.DataFrame(index=test_idx)
+    rf_hodnoty = pd.DataFrame(index=test_idx)
+    chyby_zaklad = pd.DataFrame(index=test_idx)
+    chyby_rf = pd.DataFrame(index=test_idx)
     
-    for id_bod in id_bodu:
-        prefix_bodu = f"kp{id_bod}"
-        predikce = vysledky_bodu[id_bod]
+    for cislo in cisla_bodu:
+        prefix = f"kp{cislo}"
+        predikce = vysledky[cislo]
         
         #ulozim hodnoty do dataframu
-        skutecne_hodnoty[f'{prefix_bodu}_y'] = predikce['skutecne_y']
-        skutecne_hodnoty[f'{prefix_bodu}_x'] = predikce['skutecne_x']
+        pravdive_hodnoty[f'{prefix}_y'] = predikce['y_pravda']
+        pravdive_hodnoty[f'{prefix}_x'] = predikce['x_pravda']
         
-        zakladni_hodnoty[f'{prefix_bodu}_y'] = predikce['zakladni_y']
-        zakladni_hodnoty[f'{prefix_bodu}_x'] = predikce['zakladni_x']
+        zakladni_hodnoty[f'{prefix}_y'] = predikce['y_zaklad']
+        zakladni_hodnoty[f'{prefix}_x'] = predikce['x_zaklad']
         
-        rf_hodnoty[f'{prefix_bodu}_y'] = predikce['rf_y']
-        rf_hodnoty[f'{prefix_bodu}_x'] = predikce['rf_x']
+        rf_hodnoty[f'{prefix}_y'] = predikce['y_rf']
+        rf_hodnoty[f'{prefix}_x'] = predikce['x_rf']
         
         #vypocitam chyby pro Y souradnice
-        zakladni_chyby[f'{prefix_bodu}'] = np.abs(predikce['skutecne_y'] - predikce['zakladni_y'])
-        rf_chyby[f'{prefix_bodu}'] = np.abs(predikce['skutecne_y'] - predikce['rf_y'])
+        chyby_zaklad[f'{prefix}'] = np.abs(predikce['y_pravda'] - predikce['y_zaklad'])
+        chyby_rf[f'{prefix}'] = np.abs(predikce['y_pravda'] - predikce['y_rf'])
     
     #vypocet celkovy mse, docela slozity
-    def vypocet_celkove_mse(pravdive_df, predikce_df):
-        pravdive_hodnoty = []
-        predikovane_hodnoty = []
+    def spocti_celkove_mse(pravda_df, predikce_df):
+        hodnoty_pravda = []
+        hodnoty_predikce = []
         
-        for id_bod in id_bodu:
-            prefix_bodu = f"kp{id_bod}"
-            pravdive_hodnoty.append(pravdive_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
-            predikovane_hodnoty.append(predikce_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
+        for cislo in cisla_bodu:
+            prefix = f"kp{cislo}"
+            hodnoty_pravda.append(pravda_df[[f'{prefix}_y', f'{prefix}_x']].values)
+            hodnoty_predikce.append(predikce_df[[f'{prefix}_y', f'{prefix}_x']].values)
         
-        pravdive_hodnoty = np.concatenate(pravdive_hodnoty, axis=1)
-        predikovane_hodnoty = np.concatenate(predikovane_hodnoty, axis=1)
+        hodnoty_pravda = np.concatenate(hodnoty_pravda, axis=1)
+        hodnoty_predikce = np.concatenate(hodnoty_predikce, axis=1)
         
-        return mean_squared_error(pravdive_hodnoty, predikovane_hodnoty)
+        return mean_squared_error(hodnoty_pravda, hodnoty_predikce)
     
-    celkova_zakladni_mse = vypocet_celkove_mse(skutecne_hodnoty, zakladni_hodnoty)
-    celkova_rf_mse = vypocet_celkove_mse(skutecne_hodnoty, rf_hodnoty)
-    celkove_zlepseni = 100 * (celkova_zakladni_mse - celkova_rf_mse) / celkova_zakladni_mse
+    celkova_mse_zaklad = spocti_celkove_mse(pravdive_hodnoty, zakladni_hodnoty)
+    celkova_mse_rf = spocti_celkove_mse(pravdive_hodnoty, rf_hodnoty)
+    zlepseni_procenta = 100 * (celkova_mse_zaklad - celkova_mse_rf) / celkova_mse_zaklad
     
     print(f"\nCelkové výsledky:")
-    print(f"MSE bodu s největší vahou: {celkova_zakladni_mse:.4f}")
-    print(f"MSE náhodného lesa: {celkova_rf_mse:.4f}")
-    print(f"Celkové zlepšení: {celkove_zlepseni:.2f}%")
+    print(f"MSE bodu s největší vahou: {celkova_mse_zaklad:.4f}")
+    print(f"MSE náhodného lesa: {celkova_mse_rf:.4f}")
+    print(f"Celkové zlepšení: {zlepseni_procenta:.2f}%")
     
-    return skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty, zakladni_chyby, rf_chyby
+    return pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf
 
 
-def ulozit_predikce(skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty, zakladni_chyby, rf_chyby, id_bodu, vystupni_cesta):
+def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf, cisla_bodu, cesta_vystup):
     """Uloží predikce do CSV souboru."""
-    print(f"Ukládání predikcí do {vystupni_cesta}...")
-    vysledky_df = pd.DataFrame(index=skutecne_hodnoty.index)
+    print(f"Ukládání predikcí do {cesta_vystup}...")
+    vysledky_df = pd.DataFrame(index=pravdive_hodnoty.index)
     
-    for id_bod in id_bodu:
-        prefix_bodu = f"kp{id_bod}"
+    for cislo in cisla_bodu:
+        prefix = f"kp{cislo}"
         
         #beru jen y souradnice a chyby pro prehlednost
-        vysledky_df[f'skutecna_{prefix_bodu}_y'] = skutecne_hodnoty[f'{prefix_bodu}_y']
-        vysledky_df[f'nejvetsi_vaha_{prefix_bodu}_y'] = zakladni_hodnoty[f'{prefix_bodu}_y']
-        vysledky_df[f'predikce_{prefix_bodu}_y'] = rf_hodnoty[f'{prefix_bodu}_y']
-        vysledky_df[f'chyba_nejvetsi_vaha_{prefix_bodu}'] = zakladni_chyby[f'{prefix_bodu}']
-        vysledky_df[f'chyba_predikce_{prefix_bodu}'] = rf_chyby[f'{prefix_bodu}']
+        vysledky_df[f'skutecna_{prefix}_y'] = pravdive_hodnoty[f'{prefix}_y']
+        vysledky_df[f'nejvetsi_vaha_{prefix}_y'] = zakladni_hodnoty[f'{prefix}_y']
+        vysledky_df[f'predikce_{prefix}_y'] = rf_hodnoty[f'{prefix}_y']
+        vysledky_df[f'chyba_nejvetsi_vaha_{prefix}'] = chyby_zaklad[f'{prefix}']
+        vysledky_df[f'chyba_predikce_{prefix}'] = chyby_rf[f'{prefix}']
     
     #vytvorim adresar kdyztak
-    os.makedirs(os.path.dirname(vystupni_cesta), exist_ok=True)
-    vysledky_df.to_csv(vystupni_cesta)
-    print(f"Predikce uloženy do {vystupni_cesta}")
+    os.makedirs(os.path.dirname(cesta_vystup), exist_ok=True)
+    vysledky_df.to_csv(cesta_vystup)
+    print(f"Predikce uloženy do {cesta_vystup}")
 
 
-def predikce_bodu(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu.csv"):
+def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu.csv"):
     """Hlavní funkce pro zpracování a predikci všech bodů."""
-    cas_zacatek = time.time()
+    cas_start = time.time()
     
     #nactu data z csv
-    df = nacist_data(cesta_vstup)
+    df = nacti_data(cesta_vstup)
     
     #najdu vsechny body
-    id_bodu = najit_body(df)
+    cisla_bodu = najdi_body(df)
     
     #rozdelim data na trenink a test
-    trenovaci_indexy, testovaci_indexy = rozdelit_data(df)
+    train_idx, test_idx = rozdel_data(df)
     
     #zpracuju kazdy bod zvlast
     print("Zpracování bodů...")
-    vysledky_bodu = {}
-    for id_bod in tqdm(id_bodu, desc="Zpracování bodů"):
-        vysledky_bodu[id_bod] = zpracovat_bod(df, id_bod, trenovaci_indexy, testovaci_indexy)
+    vysledky = {}
+    for cislo in tqdm(cisla_bodu, desc="Zpracování bodů"):
+        vysledky[cislo] = zpracuj_bod(df, cislo, train_idx, test_idx)
     
     #spocitam chyby a tak
-    skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty, zakladni_chyby, rf_chyby = vypocitat_chyby(
-        vysledky_bodu, id_bodu, testovaci_indexy
+    pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf = spocti_chyby(
+        vysledky, cisla_bodu, test_idx
     )
     
     #ulozim vysledky do souboru
-    ulozit_predikce(skutecne_hodnoty, zakladni_hodnoty, rf_hodnoty, zakladni_chyby, rf_chyby, id_bodu, cesta_vystup)
+    uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf, cisla_bodu, cesta_vystup)
     
     cas_konec = time.time()
-    print(f"Celková doba zpracování: {cas_konec - cas_zacatek:.2f} sekund")
+    print(f"Celková doba zpracování: {cas_konec - cas_start:.2f} sekund")
     
-    return vysledky_bodu
+    return vysledky
 
 
 if __name__ == "__main__":
-    predikce_bodu()
+    predikuj_body()
