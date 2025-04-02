@@ -8,6 +8,9 @@ import re
 import os
 import time
 from tqdm import tqdm
+from warnings import filterwarnings
+
+filterwarnings("ignore")
 
 
 def nacti_data(cesta):
