@@ -64,17 +64,14 @@ Y_pred = model.predict(X_test)
 
 # print(Y_pred)
 
-mse = mean_squared_error(Y_test, Y_pred)
+mse = mean_squared_error(Y, Y_pred)
 
 print(mse)
 
 from matplotlib import pyplot as plt
 
-plt.scatter(Y_test, Y_pred)
-plt.xlabel("True Values")
-plt.ylabel("Predicted Values")
-plt.title("True vs Predicted Values")
-plt.show()
+plt.scatter(Y_pred)
+plt.scatter(Y)
 
 
 
