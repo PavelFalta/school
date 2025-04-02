@@ -95,5 +95,5 @@ plt.title("Struktura programu pro predikci bodů", fontsize=16, pad=20)
 plt.figtext(0.5, 0.02, "Program pro predikci klicovych bodu - architektura", 
             ha="center", fontsize=10, fontstyle='italic')
 
-plt.savefig("diagrams/program_structure.png", dpi=300, bbox_inches='tight')
-print("Graf struktury programu uložen do diagrams/program_structure.png") 
+plt.savefig("program_structure.png", dpi=300, bbox_inches='tight')
+print("Graf struktury programu uložen do program_structure.png") 
