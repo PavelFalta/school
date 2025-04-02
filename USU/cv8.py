@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 from sklearn.linear_model import Ridge
-from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 import time
 import re
@@ -26,6 +25,16 @@ keypoint_matches = [keypoint_pattern.match(col) for col in all_columns]
 keypoint_ids = sorted(list(set([int(match.group(1)) for match in keypoint_matches if match])))
 
 print(f"Found {len(keypoint_ids)} keypoints: {keypoint_ids}")
+
+# Create data structures to hold results
+row_indices = np.arange(len(df))
+train_indices, test_indices = train_test_split(row_indices, test_size=0.2, random_state=42)
+
+# Set up results dataframes
+y_true = pd.DataFrame(index=test_indices)
+y_baseline = pd.DataFrame(index=test_indices)
+y_weighted = pd.DataFrame(index=test_indices)
+y_ensemble = pd.DataFrame(index=test_indices)
 
 # Function to create engineered features for a keypoint
 def create_engineered_features(df, kp_id):
@@ -76,359 +85,408 @@ def create_engineered_features(df, kp_id):
     # Create feature DataFrame
     return pd.DataFrame(features)
 
-# Function to calculate baseline predictions (highest weight approach)
-def calculate_baseline_pred(df, kp_id):
-    kp_prefix = f"kp{kp_id}"
-    weight_cols = [f'pred_{kp_prefix}_val{i}' for i in range(5)]
-    prediction_weights = df[weight_cols]
-    highest_weight_idx = np.argmax(prediction_weights.values, axis=1)
-    
-    # Extract the corresponding coordinates based on highest weight
-    baseline_pred_y = np.zeros(len(df))
-    baseline_pred_x = np.zeros(len(df))
-    
-    for i in range(len(df)):
-        idx = highest_weight_idx[i]
-        baseline_pred_y[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_y']
-        baseline_pred_x[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_x']
-    
-    return np.column_stack((baseline_pred_y, baseline_pred_x))
+# Process each keypoint
+results = []
+total_start_time = time.time()
+models = {}  # Store trained models for future use
 
-# Function to calculate weighted average predictions
-def calculate_weighted_avg_pred(df, kp_id):
-    kp_prefix = f"kp{kp_id}"
-    weight_cols = [f'pred_{kp_prefix}_val{i}' for i in range(5)]
-    prediction_weights = df[weight_cols]
-    
-    weighted_pred_y = np.zeros(len(df))
-    weighted_pred_x = np.zeros(len(df))
-    
-    for i in range(len(df)):
-        weights = prediction_weights.iloc[i].values
-        # Normalize weights to sum to 1
-        weights = weights / np.sum(weights)
-        
-        for j in range(5):
-            weighted_pred_y[i] += weights[j] * df.iloc[i][f'pred_{kp_prefix}_pos{j}_y']
-            weighted_pred_x[i] += weights[j] * df.iloc[i][f'pred_{kp_prefix}_pos{j}_x']
-    
-    return np.column_stack((weighted_pred_y, weighted_pred_x))
-
-# Function to train ensemble models for a keypoint
-def train_ensemble_models(X_train, Y_train, X_test, y_col, x_col):
-    # Ridge regression model
-    ridge_y = Ridge(alpha=0.5)
-    ridge_x = Ridge(alpha=0.5)
-    
-    # SVR model
-    svr_y = SVR(kernel='rbf', C=10, epsilon=0.1)
-    svr_x = SVR(kernel='rbf', C=10, epsilon=0.1)
-    
-    # Random Forest model
-    rf_y = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_x = RandomForestRegressor(n_estimators=100, random_state=42)
-    
-    # Train each model on Y coordinate
-    ridge_y.fit(X_train, Y_train[y_col])
-    svr_y.fit(X_train, Y_train[y_col])
-    rf_y.fit(X_train, Y_train[y_col])
-    
-    # Train each model on X coordinate
-    ridge_x.fit(X_train, Y_train[x_col])
-    svr_x.fit(X_train, Y_train[x_col])
-    rf_x.fit(X_train, Y_train[x_col])
-    
-    # Make predictions
-    ridge_pred_y = ridge_y.predict(X_test)
-    svr_pred_y = svr_y.predict(X_test)
-    rf_pred_y = rf_y.predict(X_test)
-    
-    ridge_pred_x = ridge_x.predict(X_test)
-    svr_pred_x = svr_x.predict(X_test)
-    rf_pred_x = rf_x.predict(X_test)
-    
-    return {
-        'ridge': (ridge_pred_y, ridge_pred_x),
-        'svr': (svr_pred_y, svr_pred_x),
-        'rf': (rf_pred_y, rf_pred_x)
-    }
-
-# Function for inverse error weighting
-def inverse_error_weight(error):
-    return 1.0 / (error + 1e-10)  # Adding small constant to avoid division by zero
-
-# Function to create ensemble prediction
-def create_ensemble_prediction(predictions, Y_test, y_col, x_col):
-    # Calculate individual model MSEs for Y coordinate
-    ridge_mse_y = mean_squared_error(Y_test[y_col], predictions['ridge'][0])
-    svr_mse_y = mean_squared_error(Y_test[y_col], predictions['svr'][0])
-    rf_mse_y = mean_squared_error(Y_test[y_col], predictions['rf'][0])
-    
-    # Calculate individual model MSEs for X coordinate
-    ridge_mse_x = mean_squared_error(Y_test[x_col], predictions['ridge'][1])
-    svr_mse_x = mean_squared_error(Y_test[x_col], predictions['svr'][1])
-    rf_mse_x = mean_squared_error(Y_test[x_col], predictions['rf'][1])
-    
-    # Calculate weights for Y coordinate models based on inverse error
-    y_errors = np.array([ridge_mse_y, svr_mse_y, rf_mse_y])
-    y_weights = inverse_error_weight(y_errors)
-    y_weights = y_weights / np.sum(y_weights)  # Normalize to sum to 1
-    
-    # Calculate weights for X coordinate models
-    x_errors = np.array([ridge_mse_x, svr_mse_x, rf_mse_x])
-    x_weights = inverse_error_weight(x_errors)
-    x_weights = x_weights / np.sum(x_weights)  # Normalize to sum to 1
-    
-    # Create weighted ensemble predictions
-    ensemble_pred_y = (
-        y_weights[0] * predictions['ridge'][0] + 
-        y_weights[1] * predictions['svr'][0] + 
-        y_weights[2] * predictions['rf'][0]
-    )
-    
-    ensemble_pred_x = (
-        x_weights[0] * predictions['ridge'][1] + 
-        x_weights[1] * predictions['svr'][1] + 
-        x_weights[2] * predictions['rf'][1]
-    )
-    
-    # Compute overall model MSEs
-    ridge_mse = 0.5 * ridge_mse_y + 0.5 * ridge_mse_x
-    svr_mse = 0.5 * svr_mse_y + 0.5 * svr_mse_x
-    rf_mse = 0.5 * rf_mse_y + 0.5 * rf_mse_x
-    
-    model_mses = {
-        'Ridge': ridge_mse,
-        'SVR': svr_mse,
-        'RF': rf_mse
-    }
-    
-    model_weights = {
-        'Y weights': y_weights,
-        'X weights': x_weights
-    }
-    
-    return np.column_stack((ensemble_pred_y, ensemble_pred_x)), model_mses, model_weights
-
-# Main function to process a single keypoint
-def process_keypoint(df, kp_id, plot=False):
-    start_time = time.time()
+# First, train models for each keypoint
+for kp_id in keypoint_ids:
     print(f"\n{'='*50}")
-    print(f"Processing Keypoint {kp_id}")
+    print(f"Training models for Keypoint {kp_id}")
     print(f"{'='*50}")
     
     kp_prefix = f"kp{kp_id}"
     
-    # Extract columns related to this keypoint
-    kp_cols = [col for col in df.columns if kp_prefix in col]
-    kp_data = df[kp_cols]
-    
-    # Define target columns
+    # Extract target columns
     y_col = f"target_{kp_prefix}_y"
     x_col = f"target_{kp_prefix}_x"
-    Y = kp_data[[y_col, x_col]]
     
-    # Calculate baseline predictions (highest weight)
-    baseline_pred = calculate_baseline_pred(kp_data, kp_id)
-    baseline_mse = mean_squared_error(Y, baseline_pred)
-    print(f"Baseline MSE (highest weight): {baseline_mse:.4f}")
+    # Add ground truth to results dataframe
+    y_true[f'{kp_prefix}_y'] = df.loc[test_indices, y_col].values
+    y_true[f'{kp_prefix}_x'] = df.loc[test_indices, x_col].values
+    
+    # Calculate baseline (highest weight) predictions
+    weight_cols = [f'pred_{kp_prefix}_val{i}' for i in range(5)]
+    highest_weight_idx = np.argmax(df.loc[:, weight_cols].values, axis=1)
+    
+    baseline_y = np.zeros(len(df))
+    baseline_x = np.zeros(len(df))
+    
+    for i in range(len(df)):
+        idx = highest_weight_idx[i]
+        baseline_y[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_y']
+        baseline_x[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_x']
+    
+    # Add baseline predictions to results
+    y_baseline[f'{kp_prefix}_y'] = baseline_y[test_indices]
+    y_baseline[f'{kp_prefix}_x'] = baseline_x[test_indices]
     
     # Calculate weighted average predictions
-    weighted_avg_pred = calculate_weighted_avg_pred(kp_data, kp_id)
-    weighted_avg_mse = mean_squared_error(Y, weighted_avg_pred)
-    print(f"Weighted Average MSE: {weighted_avg_mse:.4f}")
+    weighted_y = np.zeros(len(df))
+    weighted_x = np.zeros(len(df))
+    
+    for i in range(len(df)):
+        weights = df.iloc[i][weight_cols].values
+        # Normalize weights to sum to 1
+        weights = weights / np.sum(weights)
+        
+        for j in range(5):
+            weighted_y[i] += weights[j] * df.iloc[i][f'pred_{kp_prefix}_pos{j}_y']
+            weighted_x[i] += weights[j] * df.iloc[i][f'pred_{kp_prefix}_pos{j}_x']
+    
+    # Add weighted predictions to results
+    y_weighted[f'{kp_prefix}_y'] = weighted_y[test_indices]
+    y_weighted[f'{kp_prefix}_x'] = weighted_x[test_indices]
     
     # Create engineered features
-    engineered_features = create_engineered_features(kp_data, kp_id)
-    print(f"Engineered features shape: {engineered_features.shape}")
+    print(f"Creating engineered features for {kp_prefix}...")
+    features_df = create_engineered_features(df, kp_id)
     
     # Scale features
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(engineered_features)
+    X_scaled = scaler.fit_transform(features_df)
     
-    # Split data
-    X_train, X_test, Y_train, Y_test = train_test_split(X_scaled, Y, test_size=0.2, random_state=42)
+    # Train models
+    X_train = X_scaled[train_indices]
+    y_train_y = df.loc[train_indices, y_col].values
+    y_train_x = df.loc[train_indices, x_col].values
     
-    # Get indices for test set
-    test_indices = np.array(range(len(Y)))[X_train.shape[0]:]
-    baseline_test_pred = baseline_pred[test_indices]
-    weighted_test_pred = weighted_avg_pred[test_indices]
+    # Train models for Y coordinate
+    ridge_y = Ridge(alpha=0.5)
+    svr_y = SVR(kernel='rbf', C=10, epsilon=0.1)
+    rf_y = RandomForestRegressor(n_estimators=100, random_state=42)
     
-    # Train ensemble models
-    predictions = train_ensemble_models(X_train, Y_train, X_test, y_col, x_col)
+    ridge_y.fit(X_train, y_train_y)
+    svr_y.fit(X_train, y_train_y)
+    rf_y.fit(X_train, y_train_y)
     
-    # Create ensemble prediction
-    ensemble_pred, model_mses, model_weights = create_ensemble_prediction(
-        predictions, Y_test, y_col, x_col
+    # Train models for X coordinate
+    ridge_x = Ridge(alpha=0.5)
+    svr_x = SVR(kernel='rbf', C=10, epsilon=0.1)
+    rf_x = RandomForestRegressor(n_estimators=100, random_state=42)
+    
+    ridge_x.fit(X_train, y_train_x)
+    svr_x.fit(X_train, y_train_x)
+    rf_x.fit(X_train, y_train_x)
+    
+    # Store models, scaler and features
+    models[kp_id] = {
+        'y_models': {
+            'ridge': ridge_y,
+            'svr': svr_y,
+            'rf': rf_y
+        },
+        'x_models': {
+            'ridge': ridge_x,
+            'svr': svr_x,
+            'rf': rf_x
+        },
+        'scaler': scaler,
+        'features_df': features_df
+    }
+    
+    # Make predictions on test set
+    X_test = X_scaled[test_indices]
+    
+    # Y-coordinate predictions
+    ridge_pred_y = ridge_y.predict(X_test)
+    svr_pred_y = svr_y.predict(X_test)
+    rf_pred_y = rf_y.predict(X_test)
+    
+    # X-coordinate predictions
+    ridge_pred_x = ridge_x.predict(X_test)
+    svr_pred_x = svr_x.predict(X_test)
+    rf_pred_x = rf_x.predict(X_test)
+    
+    # Calculate MSEs for each model
+    y_test_y = df.loc[test_indices, y_col].values
+    y_test_x = df.loc[test_indices, x_col].values
+    
+    ridge_mse_y = mean_squared_error(y_test_y, ridge_pred_y)
+    svr_mse_y = mean_squared_error(y_test_y, svr_pred_y)
+    rf_mse_y = mean_squared_error(y_test_y, rf_pred_y)
+    
+    ridge_mse_x = mean_squared_error(y_test_x, ridge_pred_x)
+    svr_mse_x = mean_squared_error(y_test_x, svr_pred_x)
+    rf_mse_x = mean_squared_error(y_test_x, rf_pred_x)
+    
+    # Use inverse error weighting for ensemble
+    def inverse_error_weight(error):
+        return 1.0 / (error + 1e-10)
+    
+    # Weight models based on their performance
+    y_errors = np.array([ridge_mse_y, svr_mse_y, rf_mse_y])
+    y_weights = inverse_error_weight(y_errors)
+    y_weights = y_weights / np.sum(y_weights)
+    
+    x_errors = np.array([ridge_mse_x, svr_mse_x, rf_mse_x])
+    x_weights = inverse_error_weight(x_errors)
+    x_weights = x_weights / np.sum(x_weights)
+    
+    # Create ensemble predictions
+    ensemble_y = (
+        y_weights[0] * ridge_pred_y + 
+        y_weights[1] * svr_pred_y + 
+        y_weights[2] * rf_pred_y
     )
-    ensemble_mse = mean_squared_error(Y_test, ensemble_pred)
     
-    # Print model MSEs
-    print("\nIndividual Model MSEs:")
-    for model, mse in model_mses.items():
-        print(f"{model}: {mse:.4f}")
+    ensemble_x = (
+        x_weights[0] * ridge_pred_x + 
+        x_weights[1] * svr_pred_x + 
+        x_weights[2] * rf_pred_x
+    )
     
-    print(f"\nEnsemble Model MSE: {ensemble_mse:.4f}")
-    print(f"Model weights: {model_weights}")
+    # Add ensemble predictions to results
+    y_ensemble[f'{kp_prefix}_y'] = ensemble_y
+    y_ensemble[f'{kp_prefix}_x'] = ensemble_x
     
-    # Calculate test MSEs for all methods
-    methods = [
-        "Baseline (Highest Weight)", 
-        "Weighted Average",
-        "Ensemble"
-    ]
+    # Calculate and store metrics
+    baseline_mse = mean_squared_error(
+        np.column_stack((y_test_y, y_test_x)), 
+        np.column_stack((baseline_y[test_indices], baseline_x[test_indices]))
+    )
     
-    mse_values = [
-        mean_squared_error(Y_test, baseline_test_pred),
-        mean_squared_error(Y_test, weighted_test_pred),
-        ensemble_mse
-    ]
+    weighted_mse = mean_squared_error(
+        np.column_stack((y_test_y, y_test_x)), 
+        np.column_stack((weighted_y[test_indices], weighted_x[test_indices]))
+    )
     
-    # Find best method
-    best_method_idx = np.argmin(mse_values)
-    best_method = methods[best_method_idx]
-    best_mse = mse_values[best_method_idx]
+    ensemble_mse = mean_squared_error(
+        np.column_stack((y_test_y, y_test_x)), 
+        np.column_stack((ensemble_y, ensemble_x))
+    )
     
-    print(f"\nBest method: {best_method} with MSE: {best_mse:.4f}")
-    
-    processing_time = time.time() - start_time
-    print(f"Processing time: {processing_time:.2f} seconds")
-    
-    # Optional plotting
-    if plot:
-        plt.figure(figsize=(15, 5))
-        
-        # Plot 1: Ground truth vs baseline
-        plt.subplot(1, 3, 1)
-        plt.scatter(Y_test[x_col], Y_test[y_col], 
-                   alpha=0.5, label='Ground truth', color='blue')
-        plt.scatter(baseline_test_pred[:, 1], baseline_test_pred[:, 0], 
-                   alpha=0.5, label='Highest weight', color='red')
-        plt.xlabel('X coordinate')
-        plt.ylabel('Y coordinate')
-        plt.title(f'Ground Truth vs Highest Weight\nMSE: {mse_values[0]:.4f}')
-        plt.legend()
-        plt.grid(True)
-        plt.axis('equal')
-        
-        # Plot 2: Ground truth vs weighted average
-        plt.subplot(1, 3, 2)
-        plt.scatter(Y_test[x_col], Y_test[y_col], 
-                   alpha=0.5, label='Ground truth', color='blue')
-        plt.scatter(weighted_test_pred[:, 1], weighted_test_pred[:, 0], 
-                   alpha=0.5, label='Weighted average', color='green')
-        plt.xlabel('X coordinate')
-        plt.ylabel('Y coordinate')
-        plt.title(f'Ground Truth vs Weighted Average\nMSE: {mse_values[1]:.4f}')
-        plt.legend()
-        plt.grid(True)
-        plt.axis('equal')
-        
-        # Plot 3: Ground truth vs ensemble
-        plt.subplot(1, 3, 3)
-        plt.scatter(Y_test[x_col], Y_test[y_col], 
-                   alpha=0.5, label='Ground truth', color='blue')
-        plt.scatter(ensemble_pred[:, 1], ensemble_pred[:, 0], 
-                   alpha=0.5, label='Ensemble', color='purple')
-        plt.xlabel('X coordinate')
-        plt.ylabel('Y coordinate')
-        plt.title(f'Ground Truth vs Ensemble\nMSE: {mse_values[2]:.4f}')
-        plt.legend()
-        plt.grid(True)
-        plt.axis('equal')
-        
-        plt.suptitle(f'Keypoint {kp_id} Predictions')
-        plt.tight_layout()
-        plt.subplots_adjust(top=0.85)
-        plt.show()
-        
-        # Plot comparison of MSE values
-        plt.figure(figsize=(8, 5))
-        bars = plt.bar(methods, mse_values, color=['red', 'green', 'purple'])
-        plt.ylabel('Mean Squared Error (MSE)')
-        plt.title(f'Comparison of Methods for Keypoint {kp_id}')
-        plt.xticks(rotation=45, ha='right')
-        
-        # Highlight the best method
-        bars[best_method_idx].set_color('gold')
-        plt.annotate(f'Best: {best_mse:.4f}', 
-                     xy=(best_method_idx, best_mse),
-                     xytext=(best_method_idx, best_mse + 1),
-                     ha='center',
-                     arrowprops=dict(facecolor='black', shrink=0.05))
-        
-        plt.tight_layout()
-        plt.show()
-    
-    return {
+    # Store results for this keypoint
+    keypoint_result = {
         'kp_id': kp_id,
         'baseline_mse': baseline_mse,
-        'weighted_avg_mse': weighted_avg_mse,
+        'weighted_mse': weighted_mse,
         'ensemble_mse': ensemble_mse,
-        'best_method': best_method,
-        'best_mse': best_mse,
-        'model_mses': model_mses,
-        'processing_time': processing_time
+        'ridge_mse_y': ridge_mse_y,
+        'svr_mse_y': svr_mse_y,
+        'rf_mse_y': rf_mse_y,
+        'ridge_mse_x': ridge_mse_x,
+        'svr_mse_x': svr_mse_x,
+        'rf_mse_x': rf_mse_x,
+        'y_weights': y_weights,
+        'x_weights': x_weights
     }
-
-# Process all keypoints
-results = []
-total_start_time = time.time()
-
-for kp_id in keypoint_ids:
-    result = process_keypoint(df, kp_id, plot=(kp_id == keypoint_ids[0]))  # Only plot the first keypoint
-    results.append(result)
+    
+    results.append(keypoint_result)
+    print(f"Completed training for {kp_prefix}")
 
 total_time = time.time() - total_start_time
 print(f"\nTotal processing time: {total_time:.2f} seconds")
 
-# Summarize results
-print("\n" + "="*80)
-print("SUMMARY OF RESULTS FOR ALL KEYPOINTS")
-print("="*80)
-
+# Create results DataFrame
 results_df = pd.DataFrame(results)
-print(results_df[['kp_id', 'baseline_mse', 'weighted_avg_mse', 'ensemble_mse', 'best_method', 'best_mse']])
+print("\nSummary of model performance by keypoint:")
+print(results_df[['kp_id', 'baseline_mse', 'weighted_mse', 'ensemble_mse']])
+
+# Calculate overall MSE for each method (across all keypoints)
+def calculate_overall_mse(true_df, pred_df):
+    true_values = []
+    pred_values = []
+    
+    for kp_id in keypoint_ids:
+        kp_prefix = f"kp{kp_id}"
+        true_values.append(true_df[[f'{kp_prefix}_y', f'{kp_prefix}_x']].values)
+        pred_values.append(pred_df[[f'{kp_prefix}_y', f'{kp_prefix}_x']].values)
+    
+    true_values = np.concatenate(true_values, axis=1)
+    pred_values = np.concatenate(pred_values, axis=1)
+    
+    return mean_squared_error(true_values, pred_values)
+
+overall_baseline_mse = calculate_overall_mse(y_true, y_baseline)
+overall_weighted_mse = calculate_overall_mse(y_true, y_weighted)
+overall_ensemble_mse = calculate_overall_mse(y_true, y_ensemble)
+
+print("\nOverall MSE (all keypoints):")
+print(f"Baseline method: {overall_baseline_mse:.4f}")
+print(f"Weighted average method: {overall_weighted_mse:.4f}")
+print(f"Ensemble method: {overall_ensemble_mse:.4f}")
 
 # Calculate improvement percentages
-results_df['baseline_to_ensemble_improvement'] = 100 * (results_df['baseline_mse'] - results_df['ensemble_mse']) / results_df['baseline_mse']
-results_df['weighted_to_ensemble_improvement'] = 100 * (results_df['weighted_avg_mse'] - results_df['ensemble_mse']) / results_df['weighted_avg_mse']
-print("\nImprovement percentages:")
-print(results_df[['kp_id', 'baseline_to_ensemble_improvement', 'weighted_to_ensemble_improvement']])
+baseline_improvement = 100 * (overall_baseline_mse - overall_ensemble_mse) / overall_baseline_mse
+weighted_improvement = 100 * (overall_weighted_mse - overall_ensemble_mse) / overall_weighted_mse
 
-# Plot overall comparison
+print(f"\nEnsemble improvement over baseline: {baseline_improvement:.2f}%")
+print(f"Ensemble improvement over weighted average: {weighted_improvement:.2f}%")
+
+# Visualize results
 plt.figure(figsize=(12, 6))
+
+# Plot MSE by keypoint
 plt.subplot(1, 2, 1)
-plt.bar(results_df['kp_id'].astype(str), results_df['baseline_mse'], color='red', alpha=0.7, label='Baseline')
-plt.bar(results_df['kp_id'].astype(str), results_df['weighted_avg_mse'], color='green', alpha=0.7, label='Weighted Avg')
-plt.bar(results_df['kp_id'].astype(str), results_df['ensemble_mse'], color='purple', alpha=0.7, label='Ensemble')
+plt.bar(results_df['kp_id'].astype(str), results_df['baseline_mse'], alpha=0.7, label='Baseline', color='red')
+plt.bar(results_df['kp_id'].astype(str), results_df['weighted_mse'], alpha=0.7, label='Weighted Avg', color='green')
+plt.bar(results_df['kp_id'].astype(str), results_df['ensemble_mse'], alpha=0.7, label='Ensemble', color='purple')
 plt.xlabel('Keypoint ID')
 plt.ylabel('MSE')
 plt.title('MSE by Keypoint and Method')
 plt.legend()
 plt.grid(axis='y', alpha=0.3)
 
-# Plot improvement percentages
+# Plot overall MSE comparison
 plt.subplot(1, 2, 2)
-plt.bar(results_df['kp_id'].astype(str), results_df['baseline_to_ensemble_improvement'], color='blue', alpha=0.7, label='vs Baseline')
-plt.bar(results_df['kp_id'].astype(str), results_df['weighted_to_ensemble_improvement'], color='orange', alpha=0.7, label='vs Weighted Avg')
-plt.xlabel('Keypoint ID')
-plt.ylabel('Improvement (%)')
-plt.title('Ensemble Improvement Percentage')
-plt.legend()
+methods = ['Baseline', 'Weighted Avg', 'Ensemble']
+overall_mses = [overall_baseline_mse, overall_weighted_mse, overall_ensemble_mse]
+bars = plt.bar(methods, overall_mses, color=['red', 'green', 'purple'])
+plt.ylabel('MSE')
+plt.title('Overall MSE Across All Keypoints')
 plt.grid(axis='y', alpha=0.3)
+
+# Highlight the best method
+best_idx = np.argmin(overall_mses)
+bars[best_idx].set_color('gold')
+plt.annotate(f'Best: {overall_mses[best_idx]:.4f}', 
+             xy=(best_idx, overall_mses[best_idx]),
+             xytext=(best_idx, overall_mses[best_idx] + 1),
+             ha='center',
+             arrowprops=dict(facecolor='black', shrink=0.05))
 
 plt.tight_layout()
 plt.show()
 
-# Count how many times each method was the best
-best_method_counts = results_df['best_method'].value_counts()
-plt.figure(figsize=(8, 5))
-plt.pie(best_method_counts, labels=best_method_counts.index, autopct='%1.1f%%', 
-        startangle=90, colors=['gold', 'lightgreen', 'lightblue'])
-plt.axis('equal')
-plt.title('Best Method Distribution Across All Keypoints')
+# Visualize predicted vs true positions for a sample of test rows
+plt.figure(figsize=(15, 10))
+
+# Select a random sample of test rows to visualize
+sample_indices = np.random.choice(test_indices, min(5, len(test_indices)), replace=False)
+
+for i, idx in enumerate(sample_indices, 1):
+    plt.subplot(2, 3, i)
+    
+    # Plot each keypoint
+    for kp_id in keypoint_ids:
+        kp_prefix = f"kp{kp_id}"
+        
+        # Get true and predicted positions
+        true_y = y_true.loc[idx, f'{kp_prefix}_y']
+        true_x = y_true.loc[idx, f'{kp_prefix}_x']
+        
+        pred_y = y_ensemble.loc[idx, f'{kp_prefix}_y']
+        pred_x = y_ensemble.loc[idx, f'{kp_prefix}_x']
+        
+        # Plot true position
+        plt.scatter(true_x, true_y, color='blue', s=80, label='True' if kp_id == keypoint_ids[0] else "")
+        
+        # Plot predicted position
+        plt.scatter(pred_x, pred_y, color='red', s=50, label='Predicted' if kp_id == keypoint_ids[0] else "")
+        
+        # Draw line between them
+        plt.plot([true_x, pred_x], [true_y, pred_y], 'k-', alpha=0.3)
+        
+        # Annotate keypoint id
+        plt.annotate(str(kp_id), (true_x, true_y), fontsize=8, ha='right')
+    
+    plt.title(f'Row {idx}')
+    plt.xlabel('X coordinate')
+    plt.ylabel('Y coordinate')
+    if i == 1:
+        plt.legend()
+    plt.grid(True)
+    plt.axis('equal')
+
+plt.suptitle('True vs Predicted Keypoint Positions for Sample Rows', fontsize=16)
+plt.tight_layout()
+plt.subplots_adjust(top=0.9)
 plt.show()
+
+# Save the predictions for all test rows
+result_df = pd.DataFrame(index=test_indices)
+
+# Add all true and predicted values to the result dataframe
+for kp_id in keypoint_ids:
+    kp_prefix = f"kp{kp_id}"
+    
+    # True values
+    result_df[f'true_{kp_prefix}_y'] = y_true[f'{kp_prefix}_y']
+    result_df[f'true_{kp_prefix}_x'] = y_true[f'{kp_prefix}_x']
+    
+    # Baseline predictions
+    result_df[f'baseline_{kp_prefix}_y'] = y_baseline[f'{kp_prefix}_y']
+    result_df[f'baseline_{kp_prefix}_x'] = y_baseline[f'{kp_prefix}_x']
+    
+    # Weighted average predictions
+    result_df[f'weighted_{kp_prefix}_y'] = y_weighted[f'{kp_prefix}_y']
+    result_df[f'weighted_{kp_prefix}_x'] = y_weighted[f'{kp_prefix}_x']
+    
+    # Ensemble predictions
+    result_df[f'ensemble_{kp_prefix}_y'] = y_ensemble[f'{kp_prefix}_y']
+    result_df[f'ensemble_{kp_prefix}_x'] = y_ensemble[f'{kp_prefix}_x']
+
+# Save to CSV
+output_path = "data/keypoint_predictions.csv"
+result_df.to_csv(output_path)
+print(f"\nPredictions saved to {output_path}")
+
+# Display a sample of the predictions
+print("\nSample of predictions:")
+print(result_df.head())
+
+# Function to predict for new data
+def predict_keypoints(new_data):
+    """
+    Predict keypoint positions for new data using trained ensemble models
+    
+    Args:
+        new_data: DataFrame containing the same format as training data
+        
+    Returns:
+        DataFrame with predicted keypoint positions
+    """
+    predictions = {}
+    
+    for kp_id in keypoint_ids:
+        kp_prefix = f"kp{kp_id}"
+        
+        # Get the models and scaler for this keypoint
+        keypoint_models = models[kp_id]
+        
+        # Create features
+        features = create_engineered_features(new_data, kp_id)
+        
+        # Scale features
+        X_scaled = keypoint_models['scaler'].transform(features)
+        
+        # Make predictions with each model
+        y_models = keypoint_models['y_models']
+        x_models = keypoint_models['x_models']
+        
+        ridge_pred_y = y_models['ridge'].predict(X_scaled)
+        svr_pred_y = y_models['svr'].predict(X_scaled)
+        rf_pred_y = y_models['rf'].predict(X_scaled)
+        
+        ridge_pred_x = x_models['ridge'].predict(X_scaled)
+        svr_pred_x = x_models['svr'].predict(X_scaled)
+        rf_pred_x = x_models['rf'].predict(X_scaled)
+        
+        # Get weights from results
+        kp_result = results_df[results_df['kp_id'] == kp_id].iloc[0]
+        y_weights = kp_result['y_weights']
+        x_weights = kp_result['x_weights']
+        
+        # Create ensemble predictions
+        ensemble_y = (
+            y_weights[0] * ridge_pred_y + 
+            y_weights[1] * svr_pred_y + 
+            y_weights[2] * rf_pred_y
+        )
+        
+        ensemble_x = (
+            x_weights[0] * ridge_pred_x + 
+            x_weights[1] * svr_pred_x + 
+            x_weights[2] * rf_pred_x
+        )
+        
+        # Store predictions
+        predictions[f'{kp_prefix}_y'] = ensemble_y
+        predictions[f'{kp_prefix}_x'] = ensemble_x
+    
+    return pd.DataFrame(predictions)
 
 
 
