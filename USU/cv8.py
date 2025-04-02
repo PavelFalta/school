@@ -31,6 +31,9 @@ X = y_data.drop(columns=["target_kp0_y", "target_kp0_x",
 print("\nFeatures head:")
 print(X.head())
 
+mse = mean_squared_error(y_data[["pred_kp0_pos0_y", "pred_kp0_pos0_x"]], y_data[["target_kp0_y", "target_kp0_x"]])
+print(f"\nMSE between pred_kp0_pos0_y and target_kp0_y: {mse:.4f}")
+
 
 scaler = StandardScaler()
 X = scaler.fit_transform(X)
