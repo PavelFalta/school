@@ -30,7 +30,8 @@ X = y_data.drop(columns=["target_kp0_y", "target_kp0_x",
                          "pred_kp0_pos1_y", "pred_kp0_pos1_x", 
                          "pred_kp0_pos2_y", "pred_kp0_pos2_x", 
                          "pred_kp0_pos3_y", "pred_kp0_pos3_x", 
-                         "pred_kp0_val4", "pred_kp0_pos4_y", "pred_kp0_pos4_x"])
+                         "pred_kp0_val4", "pred_kp0_val3", "pred_kp0_val2", "pred_kp0_val1", "pred_kp0_val0",
+                         "pred_kp0_pos4_y", "pred_kp0_pos4_x"])
 
 print("\nFeatures head:")
 print(X.head())
