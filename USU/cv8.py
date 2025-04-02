@@ -499,11 +499,3 @@ def predict_keypoints(new_data):
         predictions[f'{kp_prefix}_x'] = ensemble_x
     
     return pd.DataFrame(predictions)
-
-
-
-
-
-
-
-
