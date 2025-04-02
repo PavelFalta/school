@@ -33,7 +33,6 @@ train_indices, test_indices = train_test_split(row_indices, test_size=0.2, rando
 # Set up results dataframes
 y_true = pd.DataFrame(index=test_indices)
 y_baseline = pd.DataFrame(index=test_indices)
-y_weighted = pd.DataFrame(index=test_indices)
 y_ensemble = pd.DataFrame(index=test_indices)
 
 # Function to create engineered features for a keypoint
@@ -121,23 +120,6 @@ for kp_id in keypoint_ids:
     # Add baseline predictions to results
     y_baseline[f'{kp_prefix}_y'] = baseline_y[test_indices]
     y_baseline[f'{kp_prefix}_x'] = baseline_x[test_indices]
-    
-    # Calculate weighted average predictions
-    weighted_y = np.zeros(len(df))
-    weighted_x = np.zeros(len(df))
-    
-    for i in range(len(df)):
-        weights = df.iloc[i][weight_cols].values
-        # Normalize weights to sum to 1
-        weights = weights / np.sum(weights)
-        
-        for j in range(5):
-            weighted_y[i] += weights[j] * df.iloc[i][f'pred_{kp_prefix}_pos{j}_y']
-            weighted_x[i] += weights[j] * df.iloc[i][f'pred_{kp_prefix}_pos{j}_x']
-    
-    # Add weighted predictions to results
-    y_weighted[f'{kp_prefix}_y'] = weighted_y[test_indices]
-    y_weighted[f'{kp_prefix}_x'] = weighted_x[test_indices]
     
     # Create engineered features
     print(f"Creating engineered features for {kp_prefix}...")
@@ -247,11 +229,6 @@ for kp_id in keypoint_ids:
         np.column_stack((baseline_y[test_indices], baseline_x[test_indices]))
     )
     
-    weighted_mse = mean_squared_error(
-        np.column_stack((y_test_y, y_test_x)), 
-        np.column_stack((weighted_y[test_indices], weighted_x[test_indices]))
-    )
-    
     ensemble_mse = mean_squared_error(
         np.column_stack((y_test_y, y_test_x)), 
         np.column_stack((ensemble_y, ensemble_x))
@@ -261,7 +238,6 @@ for kp_id in keypoint_ids:
     keypoint_result = {
         'kp_id': kp_id,
         'baseline_mse': baseline_mse,
-        'weighted_mse': weighted_mse,
         'ensemble_mse': ensemble_mse,
         'ridge_mse_y': ridge_mse_y,
         'svr_mse_y': svr_mse_y,
@@ -282,7 +258,7 @@ print(f"\nTotal processing time: {total_time:.2f} seconds")
 # Create results DataFrame
 results_df = pd.DataFrame(results)
 print("\nSummary of model performance by keypoint:")
-print(results_df[['kp_id', 'baseline_mse', 'weighted_mse', 'ensemble_mse']])
+print(results_df[['kp_id', 'baseline_mse', 'ensemble_mse']])
 
 # Calculate overall MSE for each method (across all keypoints)
 def calculate_overall_mse(true_df, pred_df):
@@ -300,28 +276,23 @@ def calculate_overall_mse(true_df, pred_df):
     return mean_squared_error(true_values, pred_values)
 
 overall_baseline_mse = calculate_overall_mse(y_true, y_baseline)
-overall_weighted_mse = calculate_overall_mse(y_true, y_weighted)
 overall_ensemble_mse = calculate_overall_mse(y_true, y_ensemble)
 
 print("\nOverall MSE (all keypoints):")
-print(f"Baseline method: {overall_baseline_mse:.4f}")
-print(f"Weighted average method: {overall_weighted_mse:.4f}")
+print(f"Baseline method (highest weight): {overall_baseline_mse:.4f}")
 print(f"Ensemble method: {overall_ensemble_mse:.4f}")
 
-# Calculate improvement percentages
+# Calculate improvement percentage
 baseline_improvement = 100 * (overall_baseline_mse - overall_ensemble_mse) / overall_baseline_mse
-weighted_improvement = 100 * (overall_weighted_mse - overall_ensemble_mse) / overall_weighted_mse
 
 print(f"\nEnsemble improvement over baseline: {baseline_improvement:.2f}%")
-print(f"Ensemble improvement over weighted average: {weighted_improvement:.2f}%")
 
 # Visualize results
 plt.figure(figsize=(12, 6))
 
 # Plot MSE by keypoint
 plt.subplot(1, 2, 1)
-plt.bar(results_df['kp_id'].astype(str), results_df['baseline_mse'], alpha=0.7, label='Baseline', color='red')
-plt.bar(results_df['kp_id'].astype(str), results_df['weighted_mse'], alpha=0.7, label='Weighted Avg', color='green')
+plt.bar(results_df['kp_id'].astype(str), results_df['baseline_mse'], alpha=0.7, label='Baseline (Highest Weight)', color='red')
 plt.bar(results_df['kp_id'].astype(str), results_df['ensemble_mse'], alpha=0.7, label='Ensemble', color='purple')
 plt.xlabel('Keypoint ID')
 plt.ylabel('MSE')
@@ -331,9 +302,9 @@ plt.grid(axis='y', alpha=0.3)
 
 # Plot overall MSE comparison
 plt.subplot(1, 2, 2)
-methods = ['Baseline', 'Weighted Avg', 'Ensemble']
-overall_mses = [overall_baseline_mse, overall_weighted_mse, overall_ensemble_mse]
-bars = plt.bar(methods, overall_mses, color=['red', 'green', 'purple'])
+methods = ['Baseline (Highest Weight)', 'Ensemble']
+overall_mses = [overall_baseline_mse, overall_ensemble_mse]
+bars = plt.bar(methods, overall_mses, color=['red', 'purple'])
 plt.ylabel('MSE')
 plt.title('Overall MSE Across All Keypoints')
 plt.grid(axis='y', alpha=0.3)
@@ -367,29 +338,29 @@ for i, idx in enumerate(sample_indices, 1):
         true_y = y_true.loc[idx, f'{kp_prefix}_y']
         true_x = y_true.loc[idx, f'{kp_prefix}_x']
         
+        # Get baseline predictions
+        baseline_y = y_baseline.loc[idx, f'{kp_prefix}_y']
+        baseline_x = y_baseline.loc[idx, f'{kp_prefix}_x']
+        
         # Get ensemble predictions
         ensemble_y = y_ensemble.loc[idx, f'{kp_prefix}_y']
         ensemble_x = y_ensemble.loc[idx, f'{kp_prefix}_x']
-        
-        # Get weighted average predictions
-        weighted_y = y_weighted.loc[idx, f'{kp_prefix}_y']
-        weighted_x = y_weighted.loc[idx, f'{kp_prefix}_x']
         
         # Plot true position
         plt.scatter(true_x, true_y, color='blue', s=80, marker='o', 
                    label='True' if kp_id == keypoint_ids[0] else "")
         
-        # Plot weighted average prediction
-        plt.scatter(weighted_x, weighted_y, color='green', s=50, marker='s',
-                   label='Weighted Avg' if kp_id == keypoint_ids[0] else "")
+        # Plot baseline prediction
+        plt.scatter(baseline_x, baseline_y, color='red', s=50, marker='s',
+                   label='Highest Weight' if kp_id == keypoint_ids[0] else "")
         
         # Plot ensemble prediction
-        plt.scatter(ensemble_x, ensemble_y, color='red', s=50, marker='^',
+        plt.scatter(ensemble_x, ensemble_y, color='purple', s=50, marker='^',
                    label='Ensemble' if kp_id == keypoint_ids[0] else "")
         
         # Draw lines between true and predictions
-        plt.plot([true_x, ensemble_x], [true_y, ensemble_y], 'r-', alpha=0.3)
-        plt.plot([true_x, weighted_x], [true_y, weighted_y], 'g-', alpha=0.3)
+        plt.plot([true_x, baseline_x], [true_y, baseline_y], 'r-', alpha=0.3)
+        plt.plot([true_x, ensemble_x], [true_y, ensemble_y], 'purple', alpha=0.3)
         
         # Annotate keypoint id
         plt.annotate(str(kp_id), (true_x, true_y), fontsize=8, ha='right')
@@ -421,10 +392,6 @@ for kp_id in keypoint_ids:
     # Baseline predictions
     result_df[f'baseline_{kp_prefix}_y'] = y_baseline[f'{kp_prefix}_y']
     result_df[f'baseline_{kp_prefix}_x'] = y_baseline[f'{kp_prefix}_x']
-    
-    # Weighted average predictions
-    result_df[f'weighted_{kp_prefix}_y'] = y_weighted[f'{kp_prefix}_y']
-    result_df[f'weighted_{kp_prefix}_x'] = y_weighted[f'{kp_prefix}_x']
     
     # Ensemble predictions
     result_df[f'ensemble_{kp_prefix}_y'] = y_ensemble[f'{kp_prefix}_y']
