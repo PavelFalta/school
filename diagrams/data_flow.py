@@ -211,5 +211,5 @@ plt.title("Datový tok při predikci bodů", fontsize=16, pad=20)
 plt.figtext(0.5, 0.02, "Program pro predikci klicovych bodu - datovy tok", 
             ha="center", fontsize=10, fontstyle='italic')
 
-plt.savefig("diagrams/data_flow.png", dpi=300, bbox_inches='tight')
-print("Graf datového toku uložen do diagrams/data_flow.png") 
+plt.savefig("data_flow.png", dpi=300, bbox_inches='tight')
+print("Graf datového toku uložen do data_flow.png") 
