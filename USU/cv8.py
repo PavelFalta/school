@@ -194,11 +194,11 @@ def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, 
         prefix = f"kp{cislo}"
         
         #beru jen y souradnice a chyby pro prehlednost
-        vysledky_df[f'skutecna_{prefix}_y'] = pravdive_hodnoty[f'{prefix}_y']
-        vysledky_df[f'nejvetsi_vaha_{prefix}_y'] = zakladni_hodnoty[f'{prefix}_y']
-        vysledky_df[f'predikce_{prefix}_y'] = rf_hodnoty[f'{prefix}_y']
-        vysledky_df[f'chyba_nejvetsi_vaha_{prefix}'] = chyby_zaklad[f'{prefix}']
-        vysledky_df[f'chyba_predikce_{prefix}'] = chyby_rf[f'{prefix}']
+        vysledky_df[f'skutecna_{prefix}_y'] = pravdive_hodnoty[f'{prefix}_y'].copy()
+        vysledky_df[f'nejvetsi_vaha_{prefix}_y'] = zakladni_hodnoty[f'{prefix}_y'].copy()
+        vysledky_df[f'predikce_{prefix}_y'] = rf_hodnoty[f'{prefix}_y'].copy()
+        vysledky_df[f'chyba_nejvetsi_vaha_{prefix}'] = chyby_zaklad[f'{prefix}'].copy() 
+        vysledky_df[f'chyba_predikce_{prefix}'] = chyby_rf[f'{prefix}'].copy()
     
     #vytvorim adresar kdyztak
     os.makedirs(os.path.dirname(cesta_vystup), exist_ok=True)
