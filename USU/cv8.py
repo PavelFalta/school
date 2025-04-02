@@ -11,13 +11,11 @@ from tqdm import tqdm
 
 
 def nacti_data(cesta):
-    """Načte data z CSV souboru."""
     print(f"Načítání dat z {cesta}...")
     return pd.read_csv(cesta)
 
 
 def najdi_body(df):
-    """Najde všechny klíčové body v datasetu pomocí regex."""
     vsechny_sloupce = df.columns
     bod_regex = re.compile(r'target_kp(\d+)_[xy]')
     body_shody = [bod_regex.match(sloupec) for sloupec in vsechny_sloupce]
@@ -27,7 +25,6 @@ def najdi_body(df):
 
 
 def rozdel_data(df, test_velikost=0.2):
-    """Rozdělí data na trénovací a testovací sadu."""
     radky_indexy = np.arange(len(df))
     train_idx, test_idx = train_test_split(radky_indexy, test_size=test_velikost, random_state=42)
     print(f"Data rozdělena: {len(train_idx)} trénovacích vzorků, {len(test_idx)} testovacích vzorků")
@@ -35,7 +32,6 @@ def rozdel_data(df, test_velikost=0.2):
 
 
 def udel_zakladni_predikce(df, cislo_bodu):
-    """Vytvoří predikce na základě bodu s nejvyšší vahou."""
     prefix = f"kp{cislo_bodu}"
     sloupce_vah = [f'pred_{prefix}_val{i}' for i in range(5)]
     idx_max_vahy = np.argmax(df.loc[:, sloupce_vah].values, axis=1)
@@ -52,7 +48,6 @@ def udel_zakladni_predikce(df, cislo_bodu):
 
 
 def udel_priznaky(df, cislo_bodu):
-    """Vytvoří příznakové vektory pro daný bod."""
     prefix = f"kp{cislo_bodu}"
     sloupce_priznaku = []
     
@@ -73,14 +68,12 @@ def udel_priznaky(df, cislo_bodu):
 
 
 def trenuj_model(X_train, y_train):
-    """Natrénuje model Random Forest."""
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     return model
 
 
 def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
-    """Zpracuje jeden klíčový bod - trénování a predikce."""
     prefix = f"kp{cislo_bodu}"
     
     #najdu cilovy sloupecky
@@ -128,7 +121,6 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
 
 
 def spocti_mse(predikce):
-    """Vypočítá MSE pro skutečné vs. predikované hodnoty."""
     mse_zaklad = mean_squared_error(
         np.column_stack((predikce['y_pravda'], predikce['x_pravda'])),
         np.column_stack((predikce['y_zaklad'], predikce['x_zaklad']))
@@ -143,7 +135,6 @@ def spocti_mse(predikce):
 
 
 def spocti_chyby(vysledky, cisla_bodu, test_idx):
-    """Vypočítá chyby pro každý bod a každou metodu."""
     pravdive_hodnoty = pd.DataFrame(index=test_idx)
     zakladni_hodnoty = pd.DataFrame(index=test_idx)
     rf_hodnoty = pd.DataFrame(index=test_idx)
@@ -196,7 +187,6 @@ def spocti_chyby(vysledky, cisla_bodu, test_idx):
 
 
 def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf, cisla_bodu, cesta_vystup):
-    """Uloží predikce do CSV souboru."""
     print(f"Ukládání predikcí do {cesta_vystup}...")
     vysledky_df = pd.DataFrame(index=pravdive_hodnoty.index)
     
@@ -217,7 +207,6 @@ def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, 
 
 
 def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu.csv"):
-    """Hlavní funkce pro zpracování a predikci všech bodů."""
     cas_start = time.time()
     
     #nactu data z csv
