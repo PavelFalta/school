@@ -29,6 +29,29 @@ X = y_data.drop(columns=["pred_kp0_centroid_y", "pred_kp0_centroid_x", "pred_kp0
 
 print(X.head())
 
+# structure 
+# 5 predictions
+# pred_kp0_pos0_y  pred_kp0_pos0_x
+# pred_kp0_pos1_y  pred_kp0_pos1_x
+# pred_kp0_pos2_y  pred_kp0_pos2_x
+# pred_kp0_pos3_y  pred_kp0_pos3_x
+# pred_kp0_pos4_y  pred_kp0_pos4_x
+# each has a weight 
+
+# pred_kp0_val0
+# pred_kp0_val1
+# pred_kp0_val2
+# pred_kp0_val3
+# pred_kp0_val4
+
+# now want to use random forest regressor to predict the target_kp0_y and target_kp0_x
+
+from sklearn.ensemble import RandomForestRegressor
+
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
 print(Y.head())
 
