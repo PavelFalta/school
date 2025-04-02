@@ -6,7 +6,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import RandomForestRegressor
 import re
 import os
-import time
 from tqdm import tqdm
 from warnings import filterwarnings
 
@@ -216,8 +215,6 @@ def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, 
 
 
 def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu.csv"):
-    cas_start = time.time()
-    
     #nactu data z csv
     df = nacti_data(cesta_vstup)
     
@@ -240,9 +237,6 @@ def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predi
     
     #ulozim vysledky do souboru
     uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf, cisla_bodu, cesta_vystup)
-    
-    cas_konec = time.time()
-    print(f"Celková doba zpracování: {cas_konec - cas_start:.2f} sekund")
     
     return vysledky
 
