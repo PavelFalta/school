@@ -196,10 +196,16 @@ def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, 
     for cislo in cisla_bodu:
         prefix = f"kp{cislo}"
         
-        #beru jen y souradnice a chyby pro prehlednost
+        #beru jen souradnice a chyby pro prehlednost
         vysledky_df[f'skutecna_{prefix}_y'] = pravdive_hodnoty[f'{prefix}_y']
+        vysledky_df[f'skutecna_{prefix}_x'] = pravdive_hodnoty[f'{prefix}_x']
+        
         vysledky_df[f'nejvetsi_vaha_{prefix}_y'] = zakladni_hodnoty[f'{prefix}_y']
+        vysledky_df[f'nejvetsi_vaha_{prefix}_x'] = zakladni_hodnoty[f'{prefix}_x']
+        
         vysledky_df[f'predikce_{prefix}_y'] = rf_hodnoty[f'{prefix}_y']
+        vysledky_df[f'predikce_{prefix}_x'] = rf_hodnoty[f'{prefix}_x']
+        
         vysledky_df[f'chyba_nejvetsi_vaha_{prefix}'] = chyby_zaklad[f'{prefix}']
         vysledky_df[f'chyba_predikce_{prefix}'] = chyby_rf[f'{prefix}']
     
