@@ -1,4 +1,4 @@
-path = "data/data-recovery.csv"
+cesta = "data/data-recovery.csv"
 
 import pandas as pd
 import numpy as np
@@ -10,392 +10,289 @@ from sklearn.ensemble import RandomForestRegressor
 import time
 import re
 
-# Load data
-df = pd.read_csv(path)
-print("Original data shape:", df.shape)
+# Load data - Načtení dat
+df = pd.read_csv(cesta)
+print("Velikost dat:", df.shape)
 
-# Identify all keypoints in the dataset
-all_columns = df.columns
-keypoint_pattern = re.compile(r'target_kp(\d+)_[xy]')
-keypoint_matches = [keypoint_pattern.match(col) for col in all_columns]
-keypoint_ids = sorted(list(set([int(match.group(1)) for match in keypoint_matches if match])))
+# Identify all keypoints - Identifikace všech bodů
+vsechny_sloupce = df.columns
+vzor_bodu = re.compile(r'target_kp(\d+)_[xy]')
+shody_bodu = [vzor_bodu.match(sloupec) for sloupec in vsechny_sloupce]
+id_bodu = sorted(list(set([int(shoda.group(1)) for shoda in shody_bodu if shoda])))
 
-print(f"Found {len(keypoint_ids)} keypoints: {keypoint_ids}")
+print(f"Nalezeno {len(id_bodu)} bodů: {id_bodu}")
 
-# Split data into train and test sets
-row_indices = np.arange(len(df))
-train_indices, test_indices = train_test_split(row_indices, test_size=0.2, random_state=42)
+# Split data - Rozdělení dat
+indexy_radku = np.arange(len(df))
+trenovaci_indexy, testovaci_indexy = train_test_split(indexy_radku, test_size=0.2, random_state=42)
 
-# Set up results storage
-results = []
-y_true = pd.DataFrame(index=test_indices)
-y_baseline = pd.DataFrame(index=test_indices)
-y_centroid = pd.DataFrame(index=test_indices)
-y_rf = pd.DataFrame(index=test_indices)
-y_rf_centroid = pd.DataFrame(index=test_indices)
+# Set up results - Příprava výsledků
+vysledky = []
+skutecne_hodnoty = pd.DataFrame(index=testovaci_indexy)
+zakladni_hodnoty = pd.DataFrame(index=testovaci_indexy)  # baseline
+rf_hodnoty = pd.DataFrame(index=testovaci_indexy)       # random forest
 
-# Process each keypoint
-start_time = time.time()
+# Process each keypoint - Zpracování každého bodu
+cas_zacatek = time.time()
 
-for kp_id in keypoint_ids:
+for id_bod in id_bodu:
     print(f"\n{'='*50}")
-    print(f"Processing Keypoint {kp_id}")
+    print(f"Zpracování bodu {id_bod}")
     print(f"{'='*50}")
     
-    kp_prefix = f"kp{kp_id}"
+    prefix_bodu = f"kp{id_bod}"
     
-    # Extract target columns
-    y_col = f"target_{kp_prefix}_y"
-    x_col = f"target_{kp_prefix}_x"
+    # Extract target columns - Získání cílových sloupců
+    sloupec_y = f"target_{prefix_bodu}_y"
+    sloupec_x = f"target_{prefix_bodu}_x"
     
-    # Store ground truth for test set
-    y_true[f'{kp_prefix}_y'] = df.loc[test_indices, y_col].values
-    y_true[f'{kp_prefix}_x'] = df.loc[test_indices, x_col].values
+    # Store ground truth - Uložení skutečných hodnot
+    skutecne_hodnoty[f'{prefix_bodu}_y'] = df.loc[testovaci_indexy, sloupec_y].values
+    skutecne_hodnoty[f'{prefix_bodu}_x'] = df.loc[testovaci_indexy, sloupec_x].values
     
-    # Store centroid values for comparison
-    y_centroid[f'{kp_prefix}_y'] = df.loc[test_indices, f'pred_{kp_prefix}_centroid_y'].values
-    y_centroid[f'{kp_prefix}_x'] = df.loc[test_indices, f'pred_{kp_prefix}_centroid_x'].values
+    # Calculate baseline - Výpočet základních hodnot (baseline)
+    vahy_sloupce = [f'pred_{prefix_bodu}_val{i}' for i in range(5)]
+    indexy_nejvyssi_vahy = np.argmax(df.loc[:, vahy_sloupce].values, axis=1)
     
-    # Calculate baseline (highest weight) predictions
-    weight_cols = [f'pred_{kp_prefix}_val{i}' for i in range(5)]
-    highest_weight_idx = np.argmax(df.loc[:, weight_cols].values, axis=1)
-    
-    baseline_y = np.zeros(len(df))
-    baseline_x = np.zeros(len(df))
+    zakladni_y = np.zeros(len(df))
+    zakladni_x = np.zeros(len(df))
     
     for i in range(len(df)):
-        idx = highest_weight_idx[i]
-        baseline_y[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_y']
-        baseline_x[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_x']
+        idx = indexy_nejvyssi_vahy[i]
+        zakladni_y[i] = df.iloc[i][f'pred_{prefix_bodu}_pos{idx}_y']
+        zakladni_x[i] = df.iloc[i][f'pred_{prefix_bodu}_pos{idx}_x']
     
-    # Store baseline predictions for test set
-    y_baseline[f'{kp_prefix}_y'] = baseline_y[test_indices]
-    y_baseline[f'{kp_prefix}_x'] = baseline_x[test_indices]
+    # Store baseline - Uložení základních hodnot
+    zakladni_hodnoty[f'{prefix_bodu}_y'] = zakladni_y[testovaci_indexy]
+    zakladni_hodnoty[f'{prefix_bodu}_x'] = zakladni_x[testovaci_indexy]
     
-    # Create two sets of features:
-    # 1. Full feature set
-    # 2. Centroid-only feature set
+    # Create features - Vytvoření příznaků
+    priznaky_sloupce = []
     
-    # 1. Full feature set
-    full_feature_cols = []
-    
-    # Position predictions
+    # Position predictions - Predikce pozic
     for i in range(5):
-        full_feature_cols.extend([f'pred_{kp_prefix}_pos{i}_y', f'pred_{kp_prefix}_pos{i}_x'])
+        priznaky_sloupce.extend([f'pred_{prefix_bodu}_pos{i}_y', f'pred_{prefix_bodu}_pos{i}_x'])
     
-    # Weight values
-    full_feature_cols.extend([f'pred_{kp_prefix}_val{i}' for i in range(5)])
+    # Weight values - Hodnoty vah
+    priznaky_sloupce.extend([f'pred_{prefix_bodu}_val{i}' for i in range(5)])
     
-    # Centroid and sigma
-    full_feature_cols.extend([
-        f'pred_{kp_prefix}_centroid_y', f'pred_{kp_prefix}_centroid_x',
-        f'pred_{kp_prefix}_sigma_y', f'pred_{kp_prefix}_sigma_x'
+    # Centroid and sigma - Centroid a sigma
+    priznaky_sloupce.extend([
+        f'pred_{prefix_bodu}_centroid_y', f'pred_{prefix_bodu}_centroid_x',
+        f'pred_{prefix_bodu}_sigma_y', f'pred_{prefix_bodu}_sigma_x'
     ])
     
-    # 2. Centroid-only feature set
-    centroid_feature_cols = [
-        f'pred_{kp_prefix}_centroid_y', f'pred_{kp_prefix}_centroid_x',
-        f'pred_{kp_prefix}_sigma_y', f'pred_{kp_prefix}_sigma_x'
-    ]
+    # Extract and scale features - Extrakce a škálování příznaků
+    X = df[priznaky_sloupce].values
+    skaler = StandardScaler()
+    X_skalovane = skaler.fit_transform(X)
     
-    # Extract and scale full features
-    X_full = df[full_feature_cols].values
-    scaler_full = StandardScaler()
-    X_full_scaled = scaler_full.fit_transform(X_full)
+    # Split into train and test - Rozdělení na trénovací a testovací sadu
+    X_trenovaci = X_skalovane[trenovaci_indexy]
+    X_testovaci = X_skalovane[testovaci_indexy]
     
-    # Extract and scale centroid features
-    X_centroid = df[centroid_feature_cols].values
-    scaler_centroid = StandardScaler()
-    X_centroid_scaled = scaler_centroid.fit_transform(X_centroid)
+    y_trenovaci_y = df.loc[trenovaci_indexy, sloupec_y].values
+    y_trenovaci_x = df.loc[trenovaci_indexy, sloupec_x].values
     
-    # Split into train and test
-    X_full_train = X_full_scaled[train_indices]
-    X_full_test = X_full_scaled[test_indices]
+    y_testovaci_y = df.loc[testovaci_indexy, sloupec_y].values
+    y_testovaci_x = df.loc[testovaci_indexy, sloupec_x].values
     
-    X_centroid_train = X_centroid_scaled[train_indices]
-    X_centroid_test = X_centroid_scaled[test_indices]
-    
-    y_train_y = df.loc[train_indices, y_col].values
-    y_train_x = df.loc[train_indices, x_col].values
-    
-    y_test_y = df.loc[test_indices, y_col].values
-    y_test_x = df.loc[test_indices, x_col].values
-    
-    # Train Y-coordinate Random Forest (full features)
-    print(f"Training RF with full features for {kp_prefix} Y-coordinate...")
+    # Train Random Forest - Trénování náhodného lesa
+    print(f"Trénování náhodného lesa pro souřadnici Y bodu {prefix_bodu}...")
     rf_y = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_y.fit(X_full_train, y_train_y)
+    rf_y.fit(X_trenovaci, y_trenovaci_y)
     
-    # Train X-coordinate Random Forest (full features)
-    print(f"Training RF with full features for {kp_prefix} X-coordinate...")
+    print(f"Trénování náhodného lesa pro souřadnici X bodu {prefix_bodu}...")
     rf_x = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_x.fit(X_full_train, y_train_x)
+    rf_x.fit(X_trenovaci, y_trenovaci_x)
     
-    # Train Y-coordinate Random Forest (centroid-only features)
-    print(f"Training RF with centroids for {kp_prefix} Y-coordinate...")
-    rf_centroid_y = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_centroid_y.fit(X_centroid_train, y_train_y)
+    # Make predictions - Vytvoření predikcí
+    rf_predikce_y = rf_y.predict(X_testovaci)
+    rf_predikce_x = rf_x.predict(X_testovaci)
     
-    # Train X-coordinate Random Forest (centroid-only features)
-    print(f"Training RF with centroids for {kp_prefix} X-coordinate...")
-    rf_centroid_x = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_centroid_x.fit(X_centroid_train, y_train_x)
+    # Store Random Forest predictions - Uložení predikcí náhodného lesa
+    rf_hodnoty[f'{prefix_bodu}_y'] = rf_predikce_y
+    rf_hodnoty[f'{prefix_bodu}_x'] = rf_predikce_x
     
-    # Make predictions (full features)
-    rf_pred_y = rf_y.predict(X_full_test)
-    rf_pred_x = rf_x.predict(X_full_test)
-    
-    # Make predictions (centroid-only features)
-    rf_centroid_pred_y = rf_centroid_y.predict(X_centroid_test)
-    rf_centroid_pred_x = rf_centroid_x.predict(X_centroid_test)
-    
-    # Store Random Forest predictions
-    y_rf[f'{kp_prefix}_y'] = rf_pred_y
-    y_rf[f'{kp_prefix}_x'] = rf_pred_x
-    
-    # Store Random Forest centroid-only predictions
-    y_rf_centroid[f'{kp_prefix}_y'] = rf_centroid_pred_y
-    y_rf_centroid[f'{kp_prefix}_x'] = rf_centroid_pred_x
-    
-    # Calculate MSE for all methods
-    baseline_mse = mean_squared_error(
-        np.column_stack((y_test_y, y_test_x)),
-        np.column_stack((baseline_y[test_indices], baseline_x[test_indices]))
-    )
-    
-    centroid_mse = mean_squared_error(
-        np.column_stack((y_test_y, y_test_x)),
-        np.column_stack((df.loc[test_indices, f'pred_{kp_prefix}_centroid_y'], 
-                          df.loc[test_indices, f'pred_{kp_prefix}_centroid_x']))
+    # Calculate MSE - Výpočet střední kvadratické chyby
+    zakladni_mse = mean_squared_error(
+        np.column_stack((y_testovaci_y, y_testovaci_x)),
+        np.column_stack((zakladni_y[testovaci_indexy], zakladni_x[testovaci_indexy]))
     )
     
     rf_mse = mean_squared_error(
-        np.column_stack((y_test_y, y_test_x)),
-        np.column_stack((rf_pred_y, rf_pred_x))
+        np.column_stack((y_testovaci_y, y_testovaci_x)),
+        np.column_stack((rf_predikce_y, rf_predikce_x))
     )
     
-    rf_centroid_mse = mean_squared_error(
-        np.column_stack((y_test_y, y_test_x)),
-        np.column_stack((rf_centroid_pred_y, rf_centroid_pred_x))
-    )
+    # Calculate improvement - Výpočet zlepšení
+    zlepseni = 100 * (zakladni_mse - rf_mse) / zakladni_mse
     
-    # Calculate improvement percentages
-    baseline_to_rf_improvement = 100 * (baseline_mse - rf_mse) / baseline_mse
-    centroid_to_rf_centroid_improvement = 100 * (centroid_mse - rf_centroid_mse) / centroid_mse
-    centroid_to_baseline_improvement = 100 * (baseline_mse - centroid_mse) / baseline_mse
+    print(f"Základní MSE: {zakladni_mse:.4f}")
+    print(f"RF MSE: {rf_mse:.4f}")
+    print(f"Zlepšení: {zlepseni:.2f}%")
     
-    print(f"Baseline MSE: {baseline_mse:.4f}")
-    print(f"Centroid MSE: {centroid_mse:.4f}")
-    print(f"RF (full) MSE: {rf_mse:.4f}")
-    print(f"RF (centroid) MSE: {rf_centroid_mse:.4f}")
+    # Show feature importance - Zobrazení důležitosti příznaků
+    dulezitost_priznaku = pd.DataFrame({
+        'Příznak': priznaky_sloupce,
+        'Důležitost Y': rf_y.feature_importances_,
+        'Důležitost X': rf_x.feature_importances_
+    }).sort_values(by='Důležitost Y', ascending=False)
     
-    print(f"Improvement (Baseline → RF full): {baseline_to_rf_improvement:.2f}%")
-    print(f"Improvement (Centroid → RF centroid): {centroid_to_rf_centroid_improvement:.2f}%")
-    print(f"Improvement (Baseline → Centroid): {centroid_to_baseline_improvement:.2f}%")
+    print("\nTop 5 příznaků pro Y:")
+    print(dulezitost_priznaku[['Příznak', 'Důležitost Y']].head(5))
     
-    # Store feature importance for full model
-    feature_importance = pd.DataFrame({
-        'Feature': full_feature_cols,
-        'Importance Y': rf_y.feature_importances_,
-        'Importance X': rf_x.feature_importances_
-    }).sort_values(by='Importance Y', ascending=False)
+    print("\nTop 5 příznaků pro X:")
+    print(dulezitost_priznaku[['Příznak', 'Důležitost X']].sort_values(by='Důležitost X', ascending=False).head(5))
     
-    print("\nTop 5 features for Y-coordinate:")
-    print(feature_importance[['Feature', 'Importance Y']].head(5))
-    
-    print("\nTop 5 features for X-coordinate:")
-    print(feature_importance[['Feature', 'Importance X']].sort_values(by='Importance X', ascending=False).head(5))
-    
-    # Store results
-    results.append({
-        'kp_id': kp_id,
-        'baseline_mse': baseline_mse,
-        'centroid_mse': centroid_mse,
+    # Store results - Uložení výsledků
+    vysledky.append({
+        'id_bod': id_bod,
+        'zakladni_mse': zakladni_mse,
         'rf_mse': rf_mse,
-        'rf_centroid_mse': rf_centroid_mse,
-        'baseline_to_rf_improvement': baseline_to_rf_improvement,
-        'centroid_to_rf_centroid_improvement': centroid_to_rf_centroid_improvement,
-        'centroid_to_baseline_improvement': centroid_to_baseline_improvement,
-        'feature_importance': feature_importance
+        'zlepseni': zlepseni,
+        'dulezitost_priznaku': dulezitost_priznaku
     })
 
-total_time = time.time() - start_time
-print(f"\nTotal processing time: {total_time:.2f} seconds")
+celkovy_cas = time.time() - cas_zacatek
+print(f"\nCelkový čas zpracování: {celkovy_cas:.2f} sekund")
 
-# Calculate overall MSE for each method
-def calculate_overall_mse(true_df, pred_df):
-    true_values = []
-    pred_values = []
+# Calculate overall MSE - Výpočet celkové střední kvadratické chyby
+def vypocet_celkove_mse(pravdive_df, predikce_df):
+    pravdive_hodnoty = []
+    predikovane_hodnoty = []
     
-    for kp_id in keypoint_ids:
-        kp_prefix = f"kp{kp_id}"
-        true_values.append(true_df[[f'{kp_prefix}_y', f'{kp_prefix}_x']].values)
-        pred_values.append(pred_df[[f'{kp_prefix}_y', f'{kp_prefix}_x']].values)
+    for id_bod in id_bodu:
+        prefix_bodu = f"kp{id_bod}"
+        pravdive_hodnoty.append(pravdive_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
+        predikovane_hodnoty.append(predikce_df[[f'{prefix_bodu}_y', f'{prefix_bodu}_x']].values)
     
-    true_values = np.concatenate(true_values, axis=1)
-    pred_values = np.concatenate(pred_values, axis=1)
+    pravdive_hodnoty = np.concatenate(pravdive_hodnoty, axis=1)
+    predikovane_hodnoty = np.concatenate(predikovane_hodnoty, axis=1)
     
-    return mean_squared_error(true_values, pred_values)
+    return mean_squared_error(pravdive_hodnoty, predikovane_hodnoty)
 
-overall_baseline_mse = calculate_overall_mse(y_true, y_baseline)
-overall_centroid_mse = calculate_overall_mse(y_true, y_centroid)
-overall_rf_mse = calculate_overall_mse(y_true, y_rf)
-overall_rf_centroid_mse = calculate_overall_mse(y_true, y_rf_centroid)
+celkova_zakladni_mse = vypocet_celkove_mse(skutecne_hodnoty, zakladni_hodnoty)
+celkova_rf_mse = vypocet_celkove_mse(skutecne_hodnoty, rf_hodnoty)
+celkove_zlepseni = 100 * (celkova_zakladni_mse - celkova_rf_mse) / celkova_zakladni_mse
 
-overall_baseline_to_rf = 100 * (overall_baseline_mse - overall_rf_mse) / overall_baseline_mse
-overall_centroid_to_rf_centroid = 100 * (overall_centroid_mse - overall_rf_centroid_mse) / overall_centroid_mse
-overall_baseline_to_centroid = 100 * (overall_baseline_mse - overall_centroid_mse) / overall_baseline_mse
+print("\nCelkové výsledky:")
+print(f"Základní MSE: {celkova_zakladni_mse:.4f}")
+print(f"RF MSE: {celkova_rf_mse:.4f}")
+print(f"Celkové zlepšení: {celkove_zlepseni:.2f}%")
 
-print("\nOverall Results:")
-print(f"Baseline MSE: {overall_baseline_mse:.4f}")
-print(f"Centroid MSE: {overall_centroid_mse:.4f}")
-print(f"RF (full) MSE: {overall_rf_mse:.4f}")
-print(f"RF (centroid) MSE: {overall_rf_centroid_mse:.4f}")
+# Create summary DataFrame - Vytvoření souhrnné tabulky
+vysledky_df = pd.DataFrame([{
+    'Bod': r['id_bod'],
+    'Základní MSE': r['zakladni_mse'],
+    'RF MSE': r['rf_mse'],
+    'Zlepšení (%)': r['zlepseni']
+} for r in vysledky])
 
-print(f"\nImprovement (Baseline → RF full): {overall_baseline_to_rf:.2f}%")
-print(f"Improvement (Centroid → RF centroid): {overall_centroid_to_rf_centroid:.2f}%")
-print(f"Improvement (Baseline → Centroid): {overall_baseline_to_centroid:.2f}%")
+print("\nVýsledky podle bodů:")
+print(vysledky_df)
 
-# Create summary DataFrame
-results_df = pd.DataFrame([{
-    'kp_id': r['kp_id'],
-    'baseline_mse': r['baseline_mse'],
-    'centroid_mse': r['centroid_mse'],
-    'rf_mse': r['rf_mse'],
-    'rf_centroid_mse': r['rf_centroid_mse'],
-    'baseline_to_rf_improvement': r['baseline_to_rf_improvement'],
-    'centroid_to_rf_centroid_improvement': r['centroid_to_rf_centroid_improvement'],
-    'centroid_to_baseline_improvement': r['centroid_to_baseline_improvement']
-} for r in results])
+# Visualize results - Vizualizace výsledků
+plt.figure(figsize=(15, 6))
 
-print("\nResults by keypoint:")
-print(results_df)
-
-# Visualize results
-plt.figure(figsize=(16, 8))
-
-# Plot MSE comparison by keypoint
+# Plot MSE comparison - Graf srovnání MSE
 plt.subplot(1, 2, 1)
-bar_width = 0.2
-index = np.arange(len(keypoint_ids))
+index = np.arange(len(id_bodu))
+sirka = 0.35
 
-plt.bar(index - bar_width*1.5, results_df['baseline_mse'], bar_width, label='Baseline', color='red', alpha=0.7)
-plt.bar(index - bar_width*0.5, results_df['centroid_mse'], bar_width, label='Centroid', color='blue', alpha=0.7)
-plt.bar(index + bar_width*0.5, results_df['rf_mse'], bar_width, label='RF (full)', color='green', alpha=0.7)
-plt.bar(index + bar_width*1.5, results_df['rf_centroid_mse'], bar_width, label='RF (centroid)', color='purple', alpha=0.7)
+plt.bar(index - sirka/2, vysledky_df['Základní MSE'], sirka, label='Základní model', color='red', alpha=0.7)
+plt.bar(index + sirka/2, vysledky_df['RF MSE'], sirka, label='Náhodný les', color='green', alpha=0.7)
 
-plt.xlabel('Keypoint ID')
+plt.xlabel('ID bodu')
 plt.ylabel('MSE')
-plt.title('MSE by Keypoint and Method')
-plt.xticks(index, results_df['kp_id'].astype(str))
+plt.title('Střední kvadratická chyba podle bodu')
+plt.xticks(index, vysledky_df['Bod'].astype(str))
 plt.legend()
 plt.grid(axis='y', alpha=0.3)
 
-# Plot overall MSE comparison
+# Plot improvement percentage - Graf procenta zlepšení
 plt.subplot(1, 2, 2)
-methods = ['Baseline', 'Centroid', 'RF (full)', 'RF (centroid)']
-overall_mses = [overall_baseline_mse, overall_centroid_mse, overall_rf_mse, overall_rf_centroid_mse]
-colors = ['red', 'blue', 'green', 'purple']
-
-
-bars = plt.bar(methods, overall_mses, color=colors, alpha=0.7)
-plt.ylabel('MSE')
-plt.title('Overall MSE Across All Keypoints')
+plt.bar(vysledky_df['Bod'].astype(str), vysledky_df['Zlepšení (%)'], color='blue')
+plt.xlabel('ID bodu')
+plt.ylabel('Zlepšení (%)')
+plt.title('Zlepšení náhodného lesa oproti základnímu modelu')
 plt.grid(axis='y', alpha=0.3)
-
-# Highlight the best method
-best_idx = np.argmin(overall_mses)
-bars[best_idx].set_alpha(1.0)
-plt.annotate(f'Best: {overall_mses[best_idx]:.4f}', 
-            xy=(best_idx, overall_mses[best_idx]),
-            xytext=(best_idx, overall_mses[best_idx] + 1),
-            ha='center',
-            arrowprops=dict(facecolor='black', shrink=0.05))
 
 plt.tight_layout()
 plt.show()
 
-# Visualize sample rows with predictions
+# Visualize sample rows - Vizualizace ukázkových řádků
 plt.figure(figsize=(15, 10))
 
-# Select random sample rows
-sample_indices = np.random.choice(test_indices, min(6, len(test_indices)), replace=False)
+# Select random sample rows - Výběr náhodných ukázkových řádků
+ukazkove_indexy = np.random.choice(testovaci_indexy, min(6, len(testovaci_indexy)), replace=False)
 
-for i, idx in enumerate(sample_indices, 1):
+for i, idx in enumerate(ukazkove_indexy, 1):
     plt.subplot(2, 3, i)
     
-    # Plot each keypoint
-    for kp_id in keypoint_ids:
-        kp_prefix = f"kp{kp_id}"
+    # Plot each keypoint - Vykreslení každého bodu
+    for id_bod in id_bodu:
+        prefix_bodu = f"kp{id_bod}"
         
-        # Get positions
-        true_y = y_true.loc[idx, f'{kp_prefix}_y']
-        true_x = y_true.loc[idx, f'{kp_prefix}_x']
+        # Get positions - Získání pozic
+        skutecna_y = skutecne_hodnoty.loc[idx, f'{prefix_bodu}_y']
+        skutecna_x = skutecne_hodnoty.loc[idx, f'{prefix_bodu}_x']
         
-        baseline_y = y_baseline.loc[idx, f'{kp_prefix}_y']
-        baseline_x = y_baseline.loc[idx, f'{kp_prefix}_x']
+        zakladni_y = zakladni_hodnoty.loc[idx, f'{prefix_bodu}_y']
+        zakladni_x = zakladni_hodnoty.loc[idx, f'{prefix_bodu}_x']
         
-        centroid_y = y_centroid.loc[idx, f'{kp_prefix}_y']
-        centroid_x = y_centroid.loc[idx, f'{kp_prefix}_x']
+        rf_y = rf_hodnoty.loc[idx, f'{prefix_bodu}_y']
+        rf_x = rf_hodnoty.loc[idx, f'{prefix_bodu}_x']
         
-        rf_centroid_y = y_rf_centroid.loc[idx, f'{kp_prefix}_y']
-        rf_centroid_x = y_rf_centroid.loc[idx, f'{kp_prefix}_x']
+        # Plot positions - Vykreslení pozic
+        plt.scatter(skutecna_x, skutecna_y, color='blue', marker='o', s=80, label='Skutečná' if id_bod == id_bodu[0] else "")
+        plt.scatter(zakladni_x, zakladni_y, color='red', marker='s', s=50, label='Základní' if id_bod == id_bodu[0] else "")
+        plt.scatter(rf_x, rf_y, color='green', marker='^', s=50, label='Náhodný les' if id_bod == id_bodu[0] else "")
         
-        # Plot positions
-        plt.scatter(true_x, true_y, color='blue', marker='o', s=80, label='True' if kp_id == keypoint_ids[0] else "")
-        plt.scatter(baseline_x, baseline_y, color='red', marker='s', s=50, label='Baseline' if kp_id == keypoint_ids[0] else "")
-        plt.scatter(centroid_x, centroid_y, color='cyan', marker='d', s=50, label='Centroid' if kp_id == keypoint_ids[0] else "")
-        plt.scatter(rf_centroid_x, rf_centroid_y, color='purple', marker='^', s=50, label='RF (centroid)' if kp_id == keypoint_ids[0] else "")
+        # Draw lines - Vykreslení čar
+        plt.plot([skutecna_x, zakladni_x], [skutecna_y, zakladni_y], 'r-', alpha=0.3)
+        plt.plot([skutecna_x, rf_x], [skutecna_y, rf_y], 'g-', alpha=0.3)
         
-        # Draw lines between true and predictions
-        plt.plot([true_x, baseline_x], [true_y, baseline_y], 'r-', alpha=0.2)
-        plt.plot([true_x, centroid_x], [true_y, centroid_y], 'c-', alpha=0.2)
-        plt.plot([true_x, rf_centroid_x], [true_y, rf_centroid_y], 'purple', alpha=0.2)
-        
-        # Annotate keypoint id
-        plt.annotate(str(kp_id), (true_x, true_y), fontsize=8, ha='right')
+        # Annotate keypoint id - Popis ID bodu
+        plt.annotate(str(id_bod), (skutecna_x, skutecna_y), fontsize=8, ha='right')
     
-    plt.title(f'Row {idx}')
-    plt.xlabel('X coordinate')
-    plt.ylabel('Y coordinate')
+    plt.title(f'Řádek {idx}')
+    plt.xlabel('Souřadnice X')
+    plt.ylabel('Souřadnice Y')
     if i == 1:
         plt.legend()
     plt.grid(True)
     plt.axis('equal')
 
-plt.suptitle('True vs Predicted Keypoint Positions', fontsize=16)
+plt.suptitle('Skutečné vs. predikované pozice bodů', fontsize=16)
 plt.tight_layout()
 plt.subplots_adjust(top=0.9)
 plt.show()
 
-# Save predictions to CSV
-result_df = pd.DataFrame(index=test_indices)
+# Save predictions to CSV - Uložení predikcí do CSV
+vysledky_df = pd.DataFrame(index=testovaci_indexy)
 
-# Add predictions to result dataframe
-for kp_id in keypoint_ids:
-    kp_prefix = f"kp{kp_id}"
+# Add predictions to result dataframe - Přidání predikcí do výsledné tabulky
+for id_bod in id_bodu:
+    prefix_bodu = f"kp{id_bod}"
     
-    # True values
-    result_df[f'true_{kp_prefix}_y'] = y_true[f'{kp_prefix}_y']
-    result_df[f'true_{kp_prefix}_x'] = y_true[f'{kp_prefix}_x']
+    # True values - Skutečné hodnoty
+    vysledky_df[f'skutecna_{prefix_bodu}_y'] = skutecne_hodnoty[f'{prefix_bodu}_y']
+    vysledky_df[f'skutecna_{prefix_bodu}_x'] = skutecne_hodnoty[f'{prefix_bodu}_x']
     
-    # Baseline predictions
-    result_df[f'baseline_{kp_prefix}_y'] = y_baseline[f'{kp_prefix}_y']
-    result_df[f'baseline_{kp_prefix}_x'] = y_baseline[f'{kp_prefix}_x']
+    # Baseline predictions - Základní predikce
+    vysledky_df[f'zakladni_{prefix_bodu}_y'] = zakladni_hodnoty[f'{prefix_bodu}_y']
+    vysledky_df[f'zakladni_{prefix_bodu}_x'] = zakladni_hodnoty[f'{prefix_bodu}_x']
     
-    # Centroid predictions
-    result_df[f'centroid_{kp_prefix}_y'] = y_centroid[f'{kp_prefix}_y']
-    result_df[f'centroid_{kp_prefix}_x'] = y_centroid[f'{kp_prefix}_x']
-    
-    # Random Forest (centroid) predictions
-    result_df[f'rf_centroid_{kp_prefix}_y'] = y_rf_centroid[f'{kp_prefix}_y']
-    result_df[f'rf_centroid_{kp_prefix}_x'] = y_rf_centroid[f'{kp_prefix}_x']
+    # Random Forest predictions - Predikce náhodného lesa
+    vysledky_df[f'rf_{prefix_bodu}_y'] = rf_hodnoty[f'{prefix_bodu}_y']
+    vysledky_df[f'rf_{prefix_bodu}_x'] = rf_hodnoty[f'{prefix_bodu}_x']
 
-# Save to CSV
-output_path = "data/keypoint_predictions_centroid.csv"
-result_df.to_csv(output_path)
-print(f"\nPredictions saved to {output_path}")
+# Save to CSV - Uložení do CSV
+vystupni_cesta = "data/predikce_bodu.csv"
+vysledky_df.to_csv(vystupni_cesta)
+print(f"\nPredikce uloženy do {vystupni_cesta}")
 
-# Display sample predictions
-print("\nSample predictions:")
-print(result_df.head())
+# Display sample predictions - Zobrazení ukázkových predikcí
+print("\nUkázkové predikce:")
+print(vysledky_df.head())
