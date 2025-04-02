@@ -3,6 +3,8 @@ path = "data/data-recovery.csv"
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import classification_report
 
 df = pd.read_csv(path)
 
@@ -54,6 +56,30 @@ X = scaler.fit_transform(X)
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
 print(Y.head())
+
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, Y_train)
+
+Y_pred = model.predict(X_test)
+
+# print(Y_pred)
+
+mse = mean_squared_error(Y_test, Y_pred)
+
+print(mse)
+
+from matplotlib import pyplot as plt
+
+plt.scatter(Y_test, Y_pred)
+plt.xlabel("True Values")
+plt.ylabel("Predicted Values")
+plt.title("True vs Predicted Values")
+plt.show()
+
+
+
+
+
 
 
 
