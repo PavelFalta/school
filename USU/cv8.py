@@ -1,6 +1,8 @@
 path = "data/data-recovery.csv"
 
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 df = pd.read_csv(path)
 
@@ -20,5 +22,12 @@ y_data = df[target_col]
 
 print(y_data.head())
 
-# 1. 
+Y = y_data[["target_kp0_y", "target_kp0_x"]]
+
+X = y_data.drop(columns=["target_kp0_y", "target_kp0_x"])
+
+
+print(Y.head())
+
+
 
