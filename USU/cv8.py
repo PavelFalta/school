@@ -7,16 +7,12 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.svm import SVR
-from sklearn.linear_model import Ridge
-from sklearn.pipeline import Pipeline
 import time
 import re
 
 # Load data
 df = pd.read_csv(path)
 print("Original data shape:", df.shape)
-print(df.head())
 
 # Identify all keypoints in the dataset
 all_columns = df.columns
@@ -26,73 +22,22 @@ keypoint_ids = sorted(list(set([int(match.group(1)) for match in keypoint_matche
 
 print(f"Found {len(keypoint_ids)} keypoints: {keypoint_ids}")
 
-# Create data structures to hold results
+# Split data into train and test sets
 row_indices = np.arange(len(df))
 train_indices, test_indices = train_test_split(row_indices, test_size=0.2, random_state=42)
 
-# Set up results dataframes
+# Set up results storage
+results = []
 y_true = pd.DataFrame(index=test_indices)
 y_baseline = pd.DataFrame(index=test_indices)
-y_ensemble = pd.DataFrame(index=test_indices)
-
-# Function to create engineered features for a keypoint
-def create_engineered_features(df, kp_id):
-    features = {}
-    kp_prefix = f"kp{kp_id}"
-    
-    # Original features: all positions and weights
-    for i in range(5):
-        features[f'pos{i}_y'] = df[f'pred_{kp_prefix}_pos{i}_y'].values
-        features[f'pos{i}_x'] = df[f'pred_{kp_prefix}_pos{i}_x'].values
-        features[f'val{i}'] = df[f'pred_{kp_prefix}_val{i}'].values
-    
-    # Add centroid and sigma
-    features['centroid_y'] = df[f'pred_{kp_prefix}_centroid_y'].values
-    features['centroid_x'] = df[f'pred_{kp_prefix}_centroid_x'].values
-    features['sigma_y'] = df[f'pred_{kp_prefix}_sigma_y'].values
-    features['sigma_x'] = df[f'pred_{kp_prefix}_sigma_x'].values
-    
-    # Add spatial relationships between predictions
-    for i in range(5):
-        for j in range(i+1, 5):
-            # Distance between predictions
-            features[f'dist_{i}_{j}'] = np.sqrt(
-                (df[f'pred_{kp_prefix}_pos{i}_y'] - df[f'pred_{kp_prefix}_pos{j}_y'])**2 + 
-                (df[f'pred_{kp_prefix}_pos{i}_x'] - df[f'pred_{kp_prefix}_pos{j}_x'])**2
-            )
-    
-    # Add distances from each prediction to centroid
-    for i in range(5):
-        features[f'dist_to_centroid_{i}'] = np.sqrt(
-            (df[f'pred_{kp_prefix}_pos{i}_y'] - df[f'pred_{kp_prefix}_centroid_y'])**2 + 
-            (df[f'pred_{kp_prefix}_pos{i}_x'] - df[f'pred_{kp_prefix}_centroid_x'])**2
-        )
-    
-    # Add normalized weights (sum to 1)
-    weight_cols = [f'pred_{kp_prefix}_val{i}' for i in range(5)]
-    weight_sum = df[weight_cols].sum(axis=1)
-    for i in range(5):
-        features[f'norm_val{i}'] = df[f'pred_{kp_prefix}_val{i}'].values / weight_sum
-    
-    # Add weight ratios
-    for i in range(5):
-        for j in range(i+1, 5):
-            # Avoid division by zero
-            ratio = df[f'pred_{kp_prefix}_val{i}'] / df[f'pred_{kp_prefix}_val{j}'].replace(0, 1e-10)
-            features[f'weight_ratio_{i}_{j}'] = ratio
-    
-    # Create feature DataFrame
-    return pd.DataFrame(features)
+y_rf = pd.DataFrame(index=test_indices)
 
 # Process each keypoint
-results = []
-total_start_time = time.time()
-models = {}  # Store trained models for future use
+start_time = time.time()
 
-# First, train models for each keypoint
 for kp_id in keypoint_ids:
     print(f"\n{'='*50}")
-    print(f"Training models for Keypoint {kp_id}")
+    print(f"Processing Keypoint {kp_id}")
     print(f"{'='*50}")
     
     kp_prefix = f"kp{kp_id}"
@@ -101,7 +46,7 @@ for kp_id in keypoint_ids:
     y_col = f"target_{kp_prefix}_y"
     x_col = f"target_{kp_prefix}_x"
     
-    # Add ground truth to results dataframe
+    # Store ground truth for test set
     y_true[f'{kp_prefix}_y'] = df.loc[test_indices, y_col].values
     y_true[f'{kp_prefix}_x'] = df.loc[test_indices, x_col].values
     
@@ -117,150 +62,103 @@ for kp_id in keypoint_ids:
         baseline_y[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_y']
         baseline_x[i] = df.iloc[i][f'pred_{kp_prefix}_pos{idx}_x']
     
-    # Add baseline predictions to results
+    # Store baseline predictions for test set
     y_baseline[f'{kp_prefix}_y'] = baseline_y[test_indices]
     y_baseline[f'{kp_prefix}_x'] = baseline_x[test_indices]
     
-    # Create engineered features
-    print(f"Creating engineered features for {kp_prefix}...")
-    features_df = create_engineered_features(df, kp_id)
+    # Create features for Random Forest
+    feature_cols = []
     
-    # Scale features
+    # Position predictions
+    for i in range(5):
+        feature_cols.extend([f'pred_{kp_prefix}_pos{i}_y', f'pred_{kp_prefix}_pos{i}_x'])
+    
+    # Weight values
+    feature_cols.extend([f'pred_{kp_prefix}_val{i}' for i in range(5)])
+    
+    # Centroid and sigma
+    feature_cols.extend([
+        f'pred_{kp_prefix}_centroid_y', f'pred_{kp_prefix}_centroid_x',
+        f'pred_{kp_prefix}_sigma_y', f'pred_{kp_prefix}_sigma_x'
+    ])
+    
+    # Extract features and scale
+    X = df[feature_cols].values
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(features_df)
+    X_scaled = scaler.fit_transform(X)
     
-    # Train models
+    # Split into train and test
     X_train = X_scaled[train_indices]
+    X_test = X_scaled[test_indices]
+    
     y_train_y = df.loc[train_indices, y_col].values
     y_train_x = df.loc[train_indices, x_col].values
     
-    # Train models for Y coordinate
-    ridge_y = Ridge(alpha=0.5)
-    svr_y = SVR(kernel='rbf', C=10, epsilon=0.1)
-    rf_y = RandomForestRegressor(n_estimators=100, random_state=42)
-    
-    ridge_y.fit(X_train, y_train_y)
-    svr_y.fit(X_train, y_train_y)
-    rf_y.fit(X_train, y_train_y)
-    
-    # Train models for X coordinate
-    ridge_x = Ridge(alpha=0.5)
-    svr_x = SVR(kernel='rbf', C=10, epsilon=0.1)
-    rf_x = RandomForestRegressor(n_estimators=100, random_state=42)
-    
-    ridge_x.fit(X_train, y_train_x)
-    svr_x.fit(X_train, y_train_x)
-    rf_x.fit(X_train, y_train_x)
-    
-    # Store models, scaler and features
-    models[kp_id] = {
-        'y_models': {
-            'ridge': ridge_y,
-            'svr': svr_y,
-            'rf': rf_y
-        },
-        'x_models': {
-            'ridge': ridge_x,
-            'svr': svr_x,
-            'rf': rf_x
-        },
-        'scaler': scaler,
-        'features_df': features_df
-    }
-    
-    # Make predictions on test set
-    X_test = X_scaled[test_indices]
-    
-    # Y-coordinate predictions
-    ridge_pred_y = ridge_y.predict(X_test)
-    svr_pred_y = svr_y.predict(X_test)
-    rf_pred_y = rf_y.predict(X_test)
-    
-    # X-coordinate predictions
-    ridge_pred_x = ridge_x.predict(X_test)
-    svr_pred_x = svr_x.predict(X_test)
-    rf_pred_x = rf_x.predict(X_test)
-    
-    # Calculate MSEs for each model
     y_test_y = df.loc[test_indices, y_col].values
     y_test_x = df.loc[test_indices, x_col].values
     
-    ridge_mse_y = mean_squared_error(y_test_y, ridge_pred_y)
-    svr_mse_y = mean_squared_error(y_test_y, svr_pred_y)
-    rf_mse_y = mean_squared_error(y_test_y, rf_pred_y)
+    # Train Y-coordinate Random Forest
+    print(f"Training Random Forest for {kp_prefix} Y-coordinate...")
+    rf_y = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf_y.fit(X_train, y_train_y)
     
-    ridge_mse_x = mean_squared_error(y_test_x, ridge_pred_x)
-    svr_mse_x = mean_squared_error(y_test_x, svr_pred_x)
-    rf_mse_x = mean_squared_error(y_test_x, rf_pred_x)
+    # Train X-coordinate Random Forest
+    print(f"Training Random Forest for {kp_prefix} X-coordinate...")
+    rf_x = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf_x.fit(X_train, y_train_x)
     
-    # Use inverse error weighting for ensemble
-    def inverse_error_weight(error):
-        return 1.0 / (error + 1e-10)
+    # Make predictions
+    rf_pred_y = rf_y.predict(X_test)
+    rf_pred_x = rf_x.predict(X_test)
     
-    # Weight models based on their performance
-    y_errors = np.array([ridge_mse_y, svr_mse_y, rf_mse_y])
-    y_weights = inverse_error_weight(y_errors)
-    y_weights = y_weights / np.sum(y_weights)
+    # Store Random Forest predictions
+    y_rf[f'{kp_prefix}_y'] = rf_pred_y
+    y_rf[f'{kp_prefix}_x'] = rf_pred_x
     
-    x_errors = np.array([ridge_mse_x, svr_mse_x, rf_mse_x])
-    x_weights = inverse_error_weight(x_errors)
-    x_weights = x_weights / np.sum(x_weights)
-    
-    # Create ensemble predictions
-    ensemble_y = (
-        y_weights[0] * ridge_pred_y + 
-        y_weights[1] * svr_pred_y + 
-        y_weights[2] * rf_pred_y
-    )
-    
-    ensemble_x = (
-        x_weights[0] * ridge_pred_x + 
-        x_weights[1] * svr_pred_x + 
-        x_weights[2] * rf_pred_x
-    )
-    
-    # Add ensemble predictions to results
-    y_ensemble[f'{kp_prefix}_y'] = ensemble_y
-    y_ensemble[f'{kp_prefix}_x'] = ensemble_x
-    
-    # Calculate and store metrics
+    # Calculate MSE for baseline and Random Forest
     baseline_mse = mean_squared_error(
-        np.column_stack((y_test_y, y_test_x)), 
+        np.column_stack((y_test_y, y_test_x)),
         np.column_stack((baseline_y[test_indices], baseline_x[test_indices]))
     )
     
-    ensemble_mse = mean_squared_error(
-        np.column_stack((y_test_y, y_test_x)), 
-        np.column_stack((ensemble_y, ensemble_x))
+    rf_mse = mean_squared_error(
+        np.column_stack((y_test_y, y_test_x)),
+        np.column_stack((rf_pred_y, rf_pred_x))
     )
     
-    # Store results for this keypoint
-    keypoint_result = {
+    # Calculate improvement percentage
+    improvement = 100 * (baseline_mse - rf_mse) / baseline_mse
+    
+    print(f"Baseline MSE: {baseline_mse:.4f}")
+    print(f"Random Forest MSE: {rf_mse:.4f}")
+    print(f"Improvement: {improvement:.2f}%")
+    
+    # Store feature importance
+    feature_importance = pd.DataFrame({
+        'Feature': feature_cols,
+        'Importance Y': rf_y.feature_importances_,
+        'Importance X': rf_x.feature_importances_
+    }).sort_values(by='Importance Y', ascending=False)
+    
+    print("\nTop 5 features for Y-coordinate:")
+    print(feature_importance[['Feature', 'Importance Y']].head(5))
+    
+    print("\nTop 5 features for X-coordinate:")
+    print(feature_importance[['Feature', 'Importance X']].sort_values(by='Importance X', ascending=False).head(5))
+    
+    # Store results
+    results.append({
         'kp_id': kp_id,
         'baseline_mse': baseline_mse,
-        'ensemble_mse': ensemble_mse,
-        'ridge_mse_y': ridge_mse_y,
-        'svr_mse_y': svr_mse_y,
-        'rf_mse_y': rf_mse_y,
-        'ridge_mse_x': ridge_mse_x,
-        'svr_mse_x': svr_mse_x,
-        'rf_mse_x': rf_mse_x,
-        'y_weights': y_weights,
-        'x_weights': x_weights
-    }
-    
-    results.append(keypoint_result)
-    print(f"Completed training for {kp_prefix}")
+        'rf_mse': rf_mse,
+        'improvement': improvement,
+        'feature_importance': feature_importance
+    })
 
-total_time = time.time() - total_start_time
+total_time = time.time() - start_time
 print(f"\nTotal processing time: {total_time:.2f} seconds")
 
-# Create results DataFrame
-results_df = pd.DataFrame(results)
-print("\nSummary of model performance by keypoint:")
-print(results_df[['kp_id', 'baseline_mse', 'ensemble_mse']])
-
-# Calculate overall MSE for each method (across all keypoints)
+# Calculate overall MSE
 def calculate_overall_mse(true_df, pred_df):
     true_values = []
     pred_values = []
@@ -276,56 +174,54 @@ def calculate_overall_mse(true_df, pred_df):
     return mean_squared_error(true_values, pred_values)
 
 overall_baseline_mse = calculate_overall_mse(y_true, y_baseline)
-overall_ensemble_mse = calculate_overall_mse(y_true, y_ensemble)
+overall_rf_mse = calculate_overall_mse(y_true, y_rf)
+overall_improvement = 100 * (overall_baseline_mse - overall_rf_mse) / overall_baseline_mse
 
-print("\nOverall MSE (all keypoints):")
-print(f"Baseline method (highest weight): {overall_baseline_mse:.4f}")
-print(f"Ensemble method: {overall_ensemble_mse:.4f}")
+print("\nOverall Results:")
+print(f"Baseline MSE: {overall_baseline_mse:.4f}")
+print(f"Random Forest MSE: {overall_rf_mse:.4f}")
+print(f"Overall improvement: {overall_improvement:.2f}%")
 
-# Calculate improvement percentage
-baseline_improvement = 100 * (overall_baseline_mse - overall_ensemble_mse) / overall_baseline_mse
+# Create summary DataFrame
+results_df = pd.DataFrame([{
+    'kp_id': r['kp_id'],
+    'baseline_mse': r['baseline_mse'],
+    'rf_mse': r['rf_mse'],
+    'improvement': r['improvement']
+} for r in results])
 
-print(f"\nEnsemble improvement over baseline: {baseline_improvement:.2f}%")
+print("\nResults by keypoint:")
+print(results_df)
 
 # Visualize results
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(15, 6))
 
-# Plot MSE by keypoint
+# Plot MSE comparison by keypoint
 plt.subplot(1, 2, 1)
 plt.bar(results_df['kp_id'].astype(str), results_df['baseline_mse'], alpha=0.7, label='Baseline (Highest Weight)', color='red')
-plt.bar(results_df['kp_id'].astype(str), results_df['ensemble_mse'], alpha=0.7, label='Ensemble', color='purple')
+plt.bar(results_df['kp_id'].astype(str), results_df['rf_mse'], alpha=0.7, label='Random Forest', color='green')
 plt.xlabel('Keypoint ID')
 plt.ylabel('MSE')
-plt.title('MSE by Keypoint and Method')
+plt.title('MSE by Keypoint')
 plt.legend()
 plt.grid(axis='y', alpha=0.3)
 
-# Plot overall MSE comparison
+# Plot improvement percentage
 plt.subplot(1, 2, 2)
-methods = ['Baseline (Highest Weight)', 'Ensemble']
-overall_mses = [overall_baseline_mse, overall_ensemble_mse]
-bars = plt.bar(methods, overall_mses, color=['red', 'purple'])
-plt.ylabel('MSE')
-plt.title('Overall MSE Across All Keypoints')
+plt.bar(results_df['kp_id'].astype(str), results_df['improvement'], color='blue')
+plt.xlabel('Keypoint ID')
+plt.ylabel('Improvement (%)')
+plt.title('Random Forest Improvement over Baseline')
 plt.grid(axis='y', alpha=0.3)
-
-# Highlight the best method
-best_idx = np.argmin(overall_mses)
-bars[best_idx].set_color('gold')
-plt.annotate(f'Best: {overall_mses[best_idx]:.4f}', 
-             xy=(best_idx, overall_mses[best_idx]),
-             xytext=(best_idx, overall_mses[best_idx] + 1),
-             ha='center',
-             arrowprops=dict(facecolor='black', shrink=0.05))
 
 plt.tight_layout()
 plt.show()
 
-# Visualize predicted vs true positions for a sample of test rows
+# Visualize sample rows with predictions
 plt.figure(figsize=(15, 10))
 
-# Select a random sample of test rows to visualize
-sample_indices = np.random.choice(test_indices, min(5, len(test_indices)), replace=False)
+# Select random sample rows
+sample_indices = np.random.choice(test_indices, min(6, len(test_indices)), replace=False)
 
 for i, idx in enumerate(sample_indices, 1):
     plt.subplot(2, 3, i)
@@ -334,33 +230,24 @@ for i, idx in enumerate(sample_indices, 1):
     for kp_id in keypoint_ids:
         kp_prefix = f"kp{kp_id}"
         
-        # Get true and predicted positions
+        # Get positions
         true_y = y_true.loc[idx, f'{kp_prefix}_y']
         true_x = y_true.loc[idx, f'{kp_prefix}_x']
         
-        # Get baseline predictions
         baseline_y = y_baseline.loc[idx, f'{kp_prefix}_y']
         baseline_x = y_baseline.loc[idx, f'{kp_prefix}_x']
         
-        # Get ensemble predictions
-        ensemble_y = y_ensemble.loc[idx, f'{kp_prefix}_y']
-        ensemble_x = y_ensemble.loc[idx, f'{kp_prefix}_x']
+        rf_y = y_rf.loc[idx, f'{kp_prefix}_y']
+        rf_x = y_rf.loc[idx, f'{kp_prefix}_x']
         
-        # Plot true position
-        plt.scatter(true_x, true_y, color='blue', s=80, marker='o', 
-                   label='True' if kp_id == keypoint_ids[0] else "")
+        # Plot positions
+        plt.scatter(true_x, true_y, color='blue', marker='o', s=80, label='True' if kp_id == keypoint_ids[0] else "")
+        plt.scatter(baseline_x, baseline_y, color='red', marker='s', s=50, label='Baseline' if kp_id == keypoint_ids[0] else "")
+        plt.scatter(rf_x, rf_y, color='green', marker='^', s=50, label='Random Forest' if kp_id == keypoint_ids[0] else "")
         
-        # Plot baseline prediction
-        plt.scatter(baseline_x, baseline_y, color='red', s=50, marker='s',
-                   label='Highest Weight' if kp_id == keypoint_ids[0] else "")
-        
-        # Plot ensemble prediction
-        plt.scatter(ensemble_x, ensemble_y, color='purple', s=50, marker='^',
-                   label='Ensemble' if kp_id == keypoint_ids[0] else "")
-        
-        # Draw lines between true and predictions
+        # Draw lines
         plt.plot([true_x, baseline_x], [true_y, baseline_y], 'r-', alpha=0.3)
-        plt.plot([true_x, ensemble_x], [true_y, ensemble_y], 'purple', alpha=0.3)
+        plt.plot([true_x, rf_x], [true_y, rf_y], 'g-', alpha=0.3)
         
         # Annotate keypoint id
         plt.annotate(str(kp_id), (true_x, true_y), fontsize=8, ha='right')
@@ -373,15 +260,15 @@ for i, idx in enumerate(sample_indices, 1):
     plt.grid(True)
     plt.axis('equal')
 
-plt.suptitle('True vs Predicted Keypoint Positions for Sample Rows', fontsize=16)
+plt.suptitle('True vs Predicted Keypoint Positions', fontsize=16)
 plt.tight_layout()
 plt.subplots_adjust(top=0.9)
 plt.show()
 
-# Save the predictions for all test rows
+# Save predictions to CSV
 result_df = pd.DataFrame(index=test_indices)
 
-# Add all true and predicted values to the result dataframe
+# Add predictions to result dataframe
 for kp_id in keypoint_ids:
     kp_prefix = f"kp{kp_id}"
     
@@ -393,76 +280,15 @@ for kp_id in keypoint_ids:
     result_df[f'baseline_{kp_prefix}_y'] = y_baseline[f'{kp_prefix}_y']
     result_df[f'baseline_{kp_prefix}_x'] = y_baseline[f'{kp_prefix}_x']
     
-    # Ensemble predictions
-    result_df[f'ensemble_{kp_prefix}_y'] = y_ensemble[f'{kp_prefix}_y']
-    result_df[f'ensemble_{kp_prefix}_x'] = y_ensemble[f'{kp_prefix}_x']
+    # Random Forest predictions
+    result_df[f'rf_{kp_prefix}_y'] = y_rf[f'{kp_prefix}_y']
+    result_df[f'rf_{kp_prefix}_x'] = y_rf[f'{kp_prefix}_x']
 
 # Save to CSV
-output_path = "data/keypoint_predictions.csv"
+output_path = "data/keypoint_predictions_simple.csv"
 result_df.to_csv(output_path)
 print(f"\nPredictions saved to {output_path}")
 
-# Display a sample of the predictions
-print("\nSample of predictions:")
+# Display sample predictions
+print("\nSample predictions:")
 print(result_df.head())
-
-# Function to predict for new data
-def predict_keypoints(new_data):
-    """
-    Predict keypoint positions for new data using trained ensemble models
-    
-    Args:
-        new_data: DataFrame containing the same format as training data
-        
-    Returns:
-        DataFrame with predicted keypoint positions
-    """
-    predictions = {}
-    
-    for kp_id in keypoint_ids:
-        kp_prefix = f"kp{kp_id}"
-        
-        # Get the models and scaler for this keypoint
-        keypoint_models = models[kp_id]
-        
-        # Create features
-        features = create_engineered_features(new_data, kp_id)
-        
-        # Scale features
-        X_scaled = keypoint_models['scaler'].transform(features)
-        
-        # Make predictions with each model
-        y_models = keypoint_models['y_models']
-        x_models = keypoint_models['x_models']
-        
-        ridge_pred_y = y_models['ridge'].predict(X_scaled)
-        svr_pred_y = y_models['svr'].predict(X_scaled)
-        rf_pred_y = y_models['rf'].predict(X_scaled)
-        
-        ridge_pred_x = x_models['ridge'].predict(X_scaled)
-        svr_pred_x = x_models['svr'].predict(X_scaled)
-        rf_pred_x = x_models['rf'].predict(X_scaled)
-        
-        # Get weights from results
-        kp_result = results_df[results_df['kp_id'] == kp_id].iloc[0]
-        y_weights = kp_result['y_weights']
-        x_weights = kp_result['x_weights']
-        
-        # Create ensemble predictions
-        ensemble_y = (
-            y_weights[0] * ridge_pred_y + 
-            y_weights[1] * svr_pred_y + 
-            y_weights[2] * rf_pred_y
-        )
-        
-        ensemble_x = (
-            x_weights[0] * ridge_pred_x + 
-            x_weights[1] * svr_pred_x + 
-            x_weights[2] * rf_pred_x
-        )
-        
-        # Store predictions
-        predictions[f'{kp_prefix}_y'] = ensemble_y
-        predictions[f'{kp_prefix}_x'] = ensemble_x
-    
-    return pd.DataFrame(predictions)
