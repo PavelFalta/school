@@ -82,4 +82,7 @@ def test3():
     driver.quit()
 
 
-test3()
+def test4():
+    driver = webdriver.Chrome("https://the-internet.herokuapp.com/upload")
+    driver.get("")
+test4()
