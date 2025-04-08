@@ -78,11 +78,16 @@ def test3():
     assert os.path.exists(os.path.join(download_dir, "file-example_PDF_1MB.pdf")), "Test neprošel."
     print("Test prošel.")
 
-    os.remove(os.path.join(download_dir, "file-example_PDF_1MB.pdf"))
+    # os.remove(os.path.join(download_dir, "file-example_PDF_1MB.pdf"))
     driver.quit()
 
 
 def test4():
-    driver = webdriver.Chrome("https://the-internet.herokuapp.com/upload")
-    driver.get("")
+    driver = webdriver.Chrome()
+    driver.get("https://the-internet.herokuapp.com/upload")
+
+    upload = driver.find_element(By.ID, "file-upload")
+    upload.send_keys("/absolutni/cesta/k/souboru.txt")
+
+test3()
 test4()
