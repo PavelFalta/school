@@ -34,8 +34,6 @@ print(len(driver.find_elements(By.TAG_NAME, "article")))
 
 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-print(driver.page_source)
-
 time.sleep(1)
 
 print(len(driver.find_elements(By.TAG_NAME, "article")))
