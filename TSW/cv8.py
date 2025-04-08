@@ -65,10 +65,6 @@ def test3():
 
     driver.get(url)
     print(driver.page_source)
-    # find all buttons
-    buttons = driver.find_elements(By.TAG_NAME, "a")
-    # click on the first button
-    print(buttons)
     time.sleep(5)
 
 test3()
