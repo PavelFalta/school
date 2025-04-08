@@ -32,8 +32,16 @@ driver.get("https://infinite-scroll.com/demo/full-page/")
 
 print(len(driver.find_elements(By.TAG_NAME, "article")))
 
+old = len(driver.find_elements(By.TAG_NAME, "article"))
+
 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
 time.sleep(1)
 
 print(len(driver.find_elements(By.TAG_NAME, "article")))
+
+new = len(driver.find_elements(By.TAG_NAME, "article"))
+
+assert new > old, "Test neprošel."
+print("Test prošel.")
+driver.quit()
