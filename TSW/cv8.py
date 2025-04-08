@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
+import time
 
 
 driver = webdriver.Chrome()
@@ -29,8 +30,10 @@ driver.quit()
 driver = webdriver.Chrome()
 driver.get("https://infinite-scroll.com/demo/full-page/")
 
-print(len(driver.find_elements(By.CLASS_NAME)))
+print(len(driver.find_elements(By.TAG_NAME, "article")))
 
 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-print(driver.page_source)
+time.sleep(5)
+
+print(len(driver.find_elements(By.TAG_NAME, "article")))
