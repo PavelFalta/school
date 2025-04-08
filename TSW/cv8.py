@@ -1,8 +1,14 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-import time
-import dotenv
-import os
-from selenium.webdriver.support.ui import Select, WebDriverWait
-from time import perf_counter
+
+
+
+driver = webdriver.Chrome()
+driver.get("https://example.com")
+
+
+assert driver.find_element(By.TAG_NAME, "h1").text == "Example Domain"
+
+
+print("Test prošel.")
+driver.quit()
