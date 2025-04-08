@@ -8,11 +8,20 @@ driver.get("https://jqueryui.com/droppable/")
 
 driver.switch_to.frame(0)
 
+print(driver.page_source)
+
+source = driver.find_element(By.ID, "draggable")
+target = driver.find_element(By.ID, "droppable")
+
+
+print(target.text)
+
+
 ActionChains(driver).drag_and_drop(source, target).perform()
 
+print(target.text)
 
-assert driver.find_element(By.TAG_NAME, "h1").text == "Example Domain"
-
+assert target.text == "Dropped!", "Test neprošel."
 
 print("Test prošel.")
 driver.quit()
