@@ -86,7 +86,7 @@ def test4():
     driver = webdriver.Chrome()
     driver.get("https://the-internet.herokuapp.com/upload")
 
-    time.sleep(2)
+    time.sleep(20)
 
     upload = driver.find_element(By.ID, "file-upload")
 
