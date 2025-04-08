@@ -4,55 +4,67 @@ from selenium.webdriver import ActionChains
 import time
 import os
 
+def test1():
+    driver = webdriver.Chrome()
+    driver.get("https://jqueryui.com/droppable/")
 
-driver = webdriver.Chrome()
-driver.get("https://jqueryui.com/droppable/")
+    driver.switch_to.frame(0)
 
-driver.switch_to.frame(0)
+    print(driver.page_source)
 
-print(driver.page_source)
-
-source = driver.find_element(By.ID, "draggable")
-target = driver.find_element(By.ID, "droppable")
-
-
-print(target.text)
+    source = driver.find_element(By.ID, "draggable")
+    target = driver.find_element(By.ID, "droppable")
 
 
-ActionChains(driver).drag_and_drop(source, target).perform()
+    print(target.text)
 
-print(target.text)
 
-assert target.text == "Dropped!", "Test neprošel."
+    ActionChains(driver).drag_and_drop(source, target).perform()
 
-print("Test prošel.")
-driver.quit()
+    print(target.text)
 
-driver = webdriver.Chrome()
-driver.get("https://infinite-scroll.com/demo/full-page/")
+    assert target.text == "Dropped!", "Test neprošel."
 
-print(len(driver.find_elements(By.TAG_NAME, "article")))
+    print("Test prošel.")
+    driver.quit()
 
-old = len(driver.find_elements(By.TAG_NAME, "article"))
+def test2():
+    driver = webdriver.Chrome()
+    driver.get("https://infinite-scroll.com/demo/full-page/")
 
-driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    print(len(driver.find_elements(By.TAG_NAME, "article")))
 
-time.sleep(1)
+    old = len(driver.find_elements(By.TAG_NAME, "article"))
 
-print(len(driver.find_elements(By.TAG_NAME, "article")))
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-new = len(driver.find_elements(By.TAG_NAME, "article"))
+    time.sleep(1)
 
-assert new > old, "Test neprošel."
-print("Test prošel.")
-driver.quit()
+    print(len(driver.find_elements(By.TAG_NAME, "article")))
 
-download_dir = os.path.abspath(".") # relativní cestu ignoruje, musíte vytvořit absolutní
+    new = len(driver.find_elements(By.TAG_NAME, "article"))
 
-options = webdriver.ChromeOptions()
+    assert new > old, "Test neprošel."
+    print("Test prošel.")
+    driver.quit()
 
-options.add_experimental_option("prefs", {
-"download.default_directory": download_dir,
-"download.prompt_for_download": False,
-"plugins.always_open_pdf_externally": True # jinak nestáhne soubor, ale otevře ho v prohlížeči
-})
+def test3():
+    download_dir = os.path.abspath(".") # relativní cestu ignoruje, musíte vytvořit absolutní
+
+    options = webdriver.ChromeOptions()
+
+    options.add_experimental_option("prefs", {
+    "download.default_directory": download_dir,
+    "download.prompt_for_download": False,
+    "plugins.always_open_pdf_externally": True # jinak nestáhne soubor, ale otevře ho v prohlížeči
+    })
+
+    driver = webdriver.Chrome(options=options)
+
+    url = "https://file-examples.com/index.php/sample-documents-download/sample-pdf-download/"
+
+    driver.get(url)
+    print(driver.page_source)
+    time.sleep(5)
+
+test3()
