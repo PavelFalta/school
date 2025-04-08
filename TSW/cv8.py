@@ -92,12 +92,8 @@ def test4():
     file = os.path.join(download_dir, "file-example_PDF_1MB.pdf")
     upload.send_keys(file)
 
-    time.sleep(2)
-
     submit = driver.find_element(By.ID, "file-submit")
     submit.click()
-
-    time.sleep(5)
 
     assert "File Uploaded!" in driver.page_source, "Test neprošel."
     print("Test prošel.")
