@@ -67,7 +67,7 @@ def test3():
     href="https://file-examples.com/wp-content/storage/2017/10/file-example_PDF_1MB.pdf"
 
     button = driver.find_element(By.XPATH, "//a[@href='" + href + "']")
-    time.sleep(2)
+    input()    
     button.click()
     time.sleep(5)
 
