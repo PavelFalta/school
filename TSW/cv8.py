@@ -29,7 +29,7 @@ driver.quit()
 driver = webdriver.Chrome()
 driver.get("https://infinite-scroll.com/demo/full-page/")
 
-print(driver.page_source)
+print(len(driver.find_elements(By.CLASS_NAME)))
 
 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
