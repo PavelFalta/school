@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
 import time
+import os
 
 
 driver = webdriver.Chrome()
@@ -45,3 +46,13 @@ new = len(driver.find_elements(By.TAG_NAME, "article"))
 assert new > old, "Test neprošel."
 print("Test prošel.")
 driver.quit()
+
+download_dir = os.path.abspath(".") # relativní cestu ignoruje, musíte vytvořit absolutní
+
+options = webdriver.ChromeOptions()
+
+options.add_experimental_option("prefs", {
+"download.default_directory": download_dir,
+"download.prompt_for_download": False,
+"plugins.always_open_pdf_externally": True # jinak nestáhne soubor, ale otevře ho v prohlížeči
+})
