@@ -64,7 +64,11 @@ def test3():
     url = "https://file-examples.com/index.php/sample-documents-download/sample-pdf-download/"
 
     driver.get(url)
-    print(driver.page_source)
+    href="https://file-examples.com/wp-content/storage/2017/10/file-example_PDF_1MB.pdf"
+
+    button = driver.find_element(By.XPATH, "//a[@href='" + href + "']")
+    time.sleep(2)
+    button.click()
     time.sleep(5)
 
 test3()
