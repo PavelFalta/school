@@ -25,3 +25,12 @@ assert target.text == "Dropped!", "Test neprošel."
 
 print("Test prošel.")
 driver.quit()
+
+driver = webdriver.Chrome()
+driver.get("https://infinite-scroll.com/demo/full-page/")
+
+print(driver.page_source)
+
+driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+print(driver.page_source)
