@@ -66,11 +66,20 @@ def test3():
     driver.get(url)
     href="https://file-examples.com/wp-content/storage/2017/10/file-example_PDF_1MB.pdf"
 
+    time.sleep(2)
+    consent_button = driver.find_element(By.CLASS_NAME, "fc-cta-consent")
+    consent_button.click()
+
     button = driver.find_element(By.XPATH, "//a[@href='" + href + "']")
-    time.sleep(1)
-    btn_class="fc-button fc-cta-consent fc-primary-button"
-    button = driver.find_element(By.CLASS_NAME, btn_class)
     button.click()
+
     time.sleep(5)
+
+    assert os.path.exists(os.path.join(download_dir, "file-example_PDF_1MB.pdf")), "Test neprošel."
+    print("Test prošel.")
+
+    os.remove(os.path.join(download_dir, "file-example_PDF_1MB.pdf"))
+    driver.quit()
+
 
 test3()
