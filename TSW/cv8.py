@@ -86,6 +86,8 @@ def test4():
     driver = webdriver.Chrome()
     driver.get("https://the-internet.herokuapp.com/upload")
 
+    time.sleep(2)
+
     upload = driver.find_element(By.ID, "file-upload")
 
     download_dir = os.path.abspath(".")
@@ -95,7 +97,10 @@ def test4():
     submit = driver.find_element(By.ID, "file-submit")
     submit.click()
 
-    assert "File Uploaded!" in driver.page_source, "Test neprošel."
+    # headers 3
+
+    headers = driver.find_elements(By.TAG_NAME, "h3")
+    assert "File Uploaded!" in headers[0].text, "Test neprošel."
     print("Test prošel.")
 
     driver.quit()
