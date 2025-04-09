@@ -38,6 +38,7 @@ def SVR(X, y, C=1,epsilon=10.0):
         G[i,dim] = -y  # sloupec odpovidajici b
         G[i,dim+1+i] = -1
         G[i+n,dim+1+i] = -1
+        
     print(f"P:{P.shape}")
     print(f"q:{q.shape}")
     print(f"G:{G.shape}")
