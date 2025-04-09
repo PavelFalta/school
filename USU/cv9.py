@@ -15,7 +15,7 @@ plt.title("Regresní data")
 plt.show()
 
 # svr implementation
-def create_model_SVM_softm_primary(X, y, C=1,epsilon=10.0):
+def SVR(X, y, C=1,epsilon=10.0):
     n,dim=X.shape #zjisti si rozmery
     # generovani matic a vektoru pro ucelovou funkci
     # generovani matice P - pro resic vstupuje jako matice prislusne kvadraticke formy
@@ -43,7 +43,7 @@ def create_model_SVM_softm_primary(X, y, C=1,epsilon=10.0):
     print(f"h:{h.shape}")
     return matrix(P), matrix(q), matrix(G), matrix(h)
 # vygeneruj si matice modelu
-P, q, G, h = create_model_SVM_softm_primary(X,y, C = 10)
+P, q, G, h = SVR(X,y, C = 10)
 # volej rešič
 sol = solvers.qp(P, q, G, h)
 w = sol['x']
@@ -54,7 +54,7 @@ xgr = np.linspace(left[0], right[0],100)
 ygr = -(w[0]*xgr + w[2])/w[1]
 ygr_p1 = -(w[0]*xgr + w[2]+1)/w[1]
 ygr_m1 = -(w[0]*xgr + w[2]-1)/w[1]
-plt.scatter(X[:,0],X[:,1], c = y)
+plt.scatter(X[:,0],y, c = y)
 plt.plot(xgr,ygr)
 plt.plot(xgr,ygr_p1, label = "+1")
 plt.plot(xgr,ygr_m1, label = "-1")
