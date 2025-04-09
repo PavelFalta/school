@@ -30,9 +30,9 @@ def SVR(X, y, C=1,epsilon=10.0):
     q[:dim+1] = 0 #nastav na nulu pozice w a b ve vektoru q
 
     # generovani omezujicich podminek
-    G = np.zeros((2*n + 2*n, dim+1+n))  # 2n constraints + 2n non-negativity constraints
-    h = np.zeros((4*n, 1))
+    h = np.concatenate((-1*np.ones((n,1)), np.zeros((n,1))))
 
+    G = np.zeros((2*n, n+dim+1))
     for i,(x,y) in enumerate(zip(X,y)):
         G[i,:dim] = -y*x # sloupce odpovidajici w
         G[i,dim] = -y  # sloupec odpovidajici b
