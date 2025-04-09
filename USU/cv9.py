@@ -41,18 +41,18 @@ def create_model_SVM_softm_primary(X, y, C=1):
     print(f"h:{h.shape}")
     return matrix(P), matrix(q), matrix(G), matrix(h)
 # vygeneruj si matice modelu
-P, q, G, h = create_model_SVM_softm_primary(X,y, C = 10)
+P, q, G, h = create_model_SVM_softm_primary(x,y, C = 10)
 # volej rešič
 sol = solvers.qp(P, q, G, h)
 w = sol['x']
 #vizualizace výsledků
-left = np.min(X, axis = 0)
-right = np.max(X, axis = 0)
+left = np.min(x, axis = 0)
+right = np.max(x, axis = 0)
 xgr = np.linspace(left[0], right[0],100)
 ygr = -(w[0]*xgr + w[2])/w[1]
 ygr_p1 = -(w[0]*xgr + w[2]+1)/w[1]
 ygr_m1 = -(w[0]*xgr + w[2]-1)/w[1]
-plt.scatter(X[:,0],X[:,1], c = y)
+plt.scatter(x[:,0],x[:,1], c = y)
 plt.plot(xgr,ygr)
 plt.plot(xgr,ygr_p1, label = "+1")
 plt.plot(xgr,ygr_m1, label = "-1")
