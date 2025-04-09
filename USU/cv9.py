@@ -1,20 +1,21 @@
 from cvxopt import matrix, solvers
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.datasets import make_blobs
+from sklearn.datasets import make_blobs, make_regression
 
 
-dim = 2 # dimenze ulohy
+dim = 1
 samples = 100
-X, y = make_blobs(n_samples=samples, centers=2, random_state=0, cluster_std=1.2)
-y[y==0] = -1 # udelej tridy -1/1
-plt.scatter(X[:,0],X[:,1], c = y)
+X, y = make_regression(n_samples=samples, n_features=dim, noise=10, random_state=0)
+
+
+plt.scatter(X[:, 0], y, c='b')
 plt.grid()
-plt.title("Body různých tříd v prostoru příznaků")
+plt.title("Regresní data")
 plt.show()
 
 # svr implementation
-def create_model_SVM_softm_primary(X, y, C=1):
+def create_model_SVM_softm_primary(X, y, C=1,epsilon=10.0):
     n,dim=X.shape #zjisti si rozmery
     # generovani matic a vektoru pro ucelovou funkci
     # generovani matice P - pro resic vstupuje jako matice prislusne kvadraticke formy
