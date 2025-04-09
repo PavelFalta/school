@@ -9,36 +9,34 @@ samples = 100
 X, y = make_regression(n_samples=samples, n_features=dim, noise=10, random_state=0)
 
 
-# plt.scatter(X[:, 0], y, c='b')
-# plt.grid()
-# plt.title("Regresní data")
-# plt.show()
+plt.scatter(X[:, 0], y, c='b')
+plt.grid()
+plt.title("Regresní data")
+plt.show()
 
 # svr implementation
 def SVR(X, y, C=1,epsilon=10.0):
-    # need to redo the code from SVM to SVR
     n,dim=X.shape #zjisti si rozmery
     # generovani matic a vektoru pro ucelovou funkci
     # generovani matice P - pro resic vstupuje jako matice prislusne kvadraticke formy
-    P = np.zeros((dim+1+2*n,dim+1+2*n))
+    P = np.zeros((dim+1+n,dim+1+n))
 
     for i in range(0, dim):
         P[i,i]=1 # prepis 1 na diagonalu pro hodnoty w
 
     # generovani vektoru q - vektor s koeficienty pro linearni cast ucelove funkce
-    q = C*np.ones(dim+1+2*n) # linearni clen v ucelove funkci soucet ksi
+    q = C*np.ones(dim+1+n) # linearni clen v ucelove funkci soucet ksi
     q[:dim+1] = 0 #nastav na nulu pozice w a b ve vektoru q
 
     # generovani omezujicich podminek
     h = np.concatenate((-1*np.ones((n,1)), np.zeros((n,1))))
 
-    G = np.zeros((2*n, dim+1+2*n))
+    G = np.zeros((2*n, n+dim+1))
     for i,(x,y) in enumerate(zip(X,y)):
         G[i,:dim] = -y*x # sloupce odpovidajici w
         G[i,dim] = -y  # sloupec odpovidajici b
         G[i,dim+1+i] = -1
         G[i+n,dim+1+i] = -1
-        
     print(f"P:{P.shape}")
     print(f"q:{q.shape}")
     print(f"G:{G.shape}")
