@@ -2,16 +2,15 @@ from cvxopt import matrix, solvers
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.datasets import make_blobs
+import random
 
 
-dim = 2 # dimenze ulohy
-samples = 100
-X, y = make_blobs(n_samples=samples, centers=2, random_state=0, cluster_std=1.2)
-y[y==0] = -1 # udelej tridy -1/1
-plt.scatter(X[:,0],X[:,1], c = y)
+x = [ i for i in range(20)]
+y = [ i+5*random.random() for i in x]
+y[7] = 20
+y[12] = 1
+plt.scatter(x,y)
 plt.grid()
-plt.title("Body různých tříd v prostoru příznaků")
-plt.show()
 
 # svr implementation
 def create_model_SVM_softm_primary(X, y, C=1):
