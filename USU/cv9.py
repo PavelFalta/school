@@ -1,11 +1,16 @@
 from cvxopt import matrix, solvers
 import numpy as np
 from matplotlib import pyplot as plt
+from sklearn.datasets import make_blobs
 
-x = np.linspace(0, 10, 100)
-y = x + np.random.normal(size=100) * 2
 
-plt.scatter(x, y)
+dim = 2 # dimenze ulohy
+samples = 100
+X, y = make_blobs(n_samples=samples, centers=2, random_state=0, cluster_std=1.2)
+y[y==0] = -1 # udelej tridy -1/1
+plt.scatter(X[:,0],X[:,1], c = y)
+plt.grid()
+plt.title("Body různých tříd v prostoru příznaků")
 plt.show()
 
 # svr implementation
@@ -17,7 +22,7 @@ def create_model_SVM_softm_primary(X, y, C=1):
 
     for i in range(0, dim):
         P[i,i]=1 # prepis 1 na diagonalu pro hodnoty w
-        
+
     # generovani vektoru q - vektor s koeficienty pro linearni cast ucelove funkce
     q = C*np.ones(dim+1+n) # linearni clen v ucelove funkci soucet ksi
     q[:dim+1] = 0 #nastav na nulu pozice w a b ve vektoru q
