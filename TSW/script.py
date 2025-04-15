@@ -4,6 +4,8 @@ from serpapi.google_search import GoogleSearch
 import dotenv
 import os
 
+dotenv.load_dotenv()
+
 # === CONFIG ===
 SEARCH_TERM = 'inurl:http inurl:.cz'
 CHECK_STRING = '{{ comment | safe }}'
