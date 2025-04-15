@@ -1,50 +1,82 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, redirect
+
+import sqlite3
 
 app = Flask(__name__)
 
-# In-memory "databáze" komentářů
+# Inicializace databáze
 
-comments = []
+def init_db():
+
+    conn = sqlite3.connect('users.db')
+
+    c = conn.cursor()
+
+    c.execute('DROP TABLE IF EXISTS users')
+
+    c.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password TEXT)')
+
+    c.execute('INSERT INTO users (username, password) VALUES ("admin", "admin123")')
+
+    c.execute('INSERT INTO users (username, password) VALUES ("user", "user123")')
+
+    conn.commit()
+
+    conn.close()
+
+init_db()
 
 @app.route('/', methods=['GET', 'POST'])
 
-def guestbook():
+def login():
+
+    error = None
 
     if request.method == 'POST':
 
-        comment = request.form['comment']
+        username = request.form['username']
 
-        comments.append(comment)
+        password = request.form['password']
+
+        conn = sqlite3.connect('users.db')
+
+        c = conn.cursor()
+
+        query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+
+        print(f"DEBUG: {query}")
+
+        c.execute(query)
+
+        result = c.fetchone()
+
+        conn.close()
+
+        if result:
+
+            return f"Welcome, {username}!"
+
+        else:
+
+            error = "Invalid credentials"
 
     return render_template_string('''
 
-        <h2>📖 Guestbook</h2>
+        <h2>Login</h2>
 
-        <p>Leave a comment – anything you write will be shown below.</p>
+        {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
 
         <form method="POST">
 
-            <textarea name="comment" rows="4" cols="40"></textarea><br>
+            Username: <input type="text" name="username"><br>
 
-            <input type="submit" value="Post Comment">
+            Password: <input type="text" name="password"><br>
+
+            <input type="submit" value="Login">
 
         </form>
 
-        <hr>
-
-        <h3>🗨️ Comments:</h3>
-
-        {% for comment in comments %}
-
-            <div style="padding:5px; border:1px solid #ccc; margin:5px;">
-
-                {{ comment | safe }}
-
-            </div>
-
-        {% endfor %}
-
-    ''', comments=comments)
+    ''', error=error)
 
 if __name__ == '__main__':
 
