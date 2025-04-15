@@ -42,7 +42,7 @@ def login():
 
         c = conn.cursor()
 
-        query = "SELECT * FROM users WHERE username = %s AND password = %s"
+        query = "SELECT * FROM users WHERE username = ? AND password = ?"
 
         print(f"DEBUG: {query}")
 
