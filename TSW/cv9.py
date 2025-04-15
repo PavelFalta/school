@@ -48,7 +48,7 @@ def login():
 
         c.execute(query)
 
-        result = c.fetchone()
+        result = c.fetchall()
 
         conn.close()
 
