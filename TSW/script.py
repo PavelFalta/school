@@ -8,7 +8,7 @@ dotenv.load_dotenv()
 
 # === CONFIG ===
 SEARCH_TERM = 'inurl:http inurl:.cz'
-CHECK_STRING = '{{ comment | safe }}'
+CHECK_STRING = 'textarea'
 SERPAPI_KEY = os.getenv('SERP')
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
 SEARCH_INTERVAL = 60  # seconds to wait before retrying when nothing is found
