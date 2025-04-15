@@ -1,11 +1,15 @@
 import requests
 import time
 from serpapi import GoogleSearch
+import dotenv
+import os
+
+dotenv.load_dotenv()
 
 # === CONFIG ===
 SEARCH_TERM = 'inurl:http inurl:.cz'
 CHECK_STRING = '{{ comment | safe }}'
-SERPAPI_KEY = 'your_serpapi_key_here'
+SERPAPI_KEY = os.getenv('SERP')
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
 SEARCH_INTERVAL = 60  # seconds between search attempts
 
