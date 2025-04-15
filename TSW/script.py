@@ -27,6 +27,7 @@ def google_search(query, max_results=200):
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
+        print(results)
         for res in results.get('organic_results', []):
             url = res.get('link')
             if url and 'http' in url and '.cz' in url:
