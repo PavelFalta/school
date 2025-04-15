@@ -1,6 +1,6 @@
 import requests
 import time
-from serpapi import GoogleSearch
+from serpapi.google_search import GoogleSearch
 import dotenv
 import os
 
@@ -11,13 +11,13 @@ SEARCH_TERM = 'inurl:http inurl:.cz'
 CHECK_STRING = '{{ comment | safe }}'
 SERPAPI_KEY = os.getenv('SERP')
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
-SEARCH_INTERVAL = 60  # seconds between search attempts
+SEARCH_INTERVAL = 10  # seconds between search attempts
 
 # === State ===
 checked_urls = set()
 
 
-def google_search(query, max_results=20):
+def google_search(query, max_results=200):
     urls = []
     params = {
         "q": query,
