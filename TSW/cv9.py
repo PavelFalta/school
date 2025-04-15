@@ -42,11 +42,11 @@ def login():
 
         c = conn.cursor()
 
-        query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+        query = "SELECT * FROM users WHERE username = %s AND password = %s"
 
         print(f"DEBUG: {query}")
 
-        c.execute(query)
+        c.execute(query, (username, password))
 
         result = c.fetchall()
         print(result)
