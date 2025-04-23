@@ -365,3 +365,17 @@ def find(root, val):
         return find(root.right, val)
     
 print(find(root, 8))
+
+rules = {"A": "B-A-B",
+         "B": "A+B+A"}
+
+word = ["A"]
+
+epochs = 2
+for i in range(epochs):
+    for idx, letter in enumerate(word):
+        if letter in rules:
+            word[idx] = list(rules[letter])
+    
+    print(word)
+
