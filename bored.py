@@ -369,11 +369,13 @@ print(find(root, 8))
 rules = {"A": "B-A-B",
          "B": "A+B+A"}
 
-word = ["A"]
+word = []
+
+current = ["A"]
 
 epochs = 2
 for i in range(epochs):
-    for idx, letter in enumerate(word):
+    for idx, letter in enumerate(current):
         if letter in rules:
             for rule in rules[letter]:
                 word.insert(idx, rule)
