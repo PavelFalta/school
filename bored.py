@@ -381,5 +381,5 @@ for i in range(epochs):
                 word.append(rule)
         
         print(word)
-        current = word
+        word = current
         input()
