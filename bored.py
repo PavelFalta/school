@@ -369,17 +369,11 @@ print(find(root, 8))
 rules = {"A": "B-A-B",
          "B": "A+B+A"}
 
-word = []
+def recursive_l_system(rules, depth = 2):
+    if depth == 0:
+        return ["A"]
+    
+    else:
+        return [rules[letter] for letter in recursive_l_system(rules, depth-1)]
 
-current = ["A"]
-
-epochs = 2
-for i in range(epochs):
-    for idx, letter in enumerate(current):
-        if letter in rules:
-            for rule in rules[letter]:
-                word.append(rule)
-        
-        print(word)
-        word = current
-        input()
+print(recursive_l_system(rules, 2))
