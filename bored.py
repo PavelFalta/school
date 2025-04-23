@@ -381,6 +381,7 @@ for i in range(epochs):
                 word.insert(idx, rule)
         
         print(word)
+        current = word
         input()
     
     print(word)
