@@ -376,7 +376,7 @@ for i in range(epochs):
     for idx, letter in enumerate(word):
         if letter in rules:
             for rule in rules[letter]:
-                word.insert(idx+1, rule)
+                word.insert(idx, rule)
         
         print(word)
         input()
