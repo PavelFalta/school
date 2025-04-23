@@ -375,8 +375,11 @@ epochs = 2
 for i in range(epochs):
     for idx, letter in enumerate(word):
         if letter in rules:
-            word[idx] = list(rules[letter])[0]
-            print(list(rules[letter])[0])
+            for rule in rules[letter]:
+                word.insert(idx+1, rule)
+        
+        print(word)
+        input()
     
     print(word)
 
