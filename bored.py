@@ -369,11 +369,11 @@ print(find(root, 8))
 rules = {"A": "B-A-B",
          "B": "A+B+A"}
 
-def recursive_l_system(rules, depth = 2):
+def recursive_l_system(start, rules, depth = 2):
     if depth == 0:
-        return ["A"]
+        return start
     
     else:
-        return [rules[letter] for letter in recursive_l_system(rules, depth-1)]
+        return "".join([recursive_l_system(rule, rules, depth-1) for rule in rules[start]])
 
-print(recursive_l_system(rules, 2))
+print(recursive_l_system("A", rules, 2))
