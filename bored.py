@@ -378,11 +378,8 @@ for i in range(epochs):
     for idx, letter in enumerate(current):
         if letter in rules:
             for rule in rules[letter]:
-                word.insert(idx, rule)
+                word.append(rule)
         
         print(word)
         current = word
         input()
-    
-    print(word)
-
