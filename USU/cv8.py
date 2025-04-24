@@ -121,7 +121,7 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
         'x_model': x_model
     }
 
-def spocti_chyby(vysledky, cisla_bodu, test_idx):
+def vypocitej_pro_bod(vysledky, cisla_bodu, test_idx):
     pravdive_hodnoty = pd.DataFrame(index=test_idx)
     zakladni_hodnoty = pd.DataFrame(index=test_idx)
     rf_hodnoty = pd.DataFrame(index=test_idx)
@@ -185,12 +185,12 @@ def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predi
         vysledky[cislo] = zpracuj_bod(df, cislo, train_idx, test_idx)
     
     #spocitam chyby a tak
-    pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf = spocti_chyby(
+    pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty = vypocitej_pro_bod(
         vysledky, cisla_bodu, test_idx
     )
     
     #ulozim vysledky do souboru
-    uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf, cisla_bodu, cesta_vystup)
+    uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, cesta_vystup)
     
     return vysledky
 
