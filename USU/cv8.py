@@ -125,8 +125,6 @@ def spocti_chyby(vysledky, cisla_bodu, test_idx):
     pravdive_hodnoty = pd.DataFrame(index=test_idx)
     zakladni_hodnoty = pd.DataFrame(index=test_idx)
     rf_hodnoty = pd.DataFrame(index=test_idx)
-    chyby_zaklad = pd.DataFrame(index=test_idx)
-    chyby_rf = pd.DataFrame(index=test_idx)
     
     for cislo in cisla_bodu:
         prefix = f"kp{cislo}"
@@ -141,13 +139,9 @@ def spocti_chyby(vysledky, cisla_bodu, test_idx):
         
         rf_hodnoty[f'{prefix}_y'] = predikce['y_rf']
         rf_hodnoty[f'{prefix}_x'] = predikce['x_rf']
-        
-        #vypocitam chyby pro Y souradnice
-        chyby_zaklad[f'{prefix}'] = np.abs(predikce['y_pravda'] - predikce['y_zaklad'])
-        chyby_rf[f'{prefix}'] = np.abs(predikce['y_pravda'] - predikce['y_rf'])
     
     
-    return pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf
+    return pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty
 
 
 def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, cesta_vystup):
