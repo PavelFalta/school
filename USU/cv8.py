@@ -121,21 +121,6 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
         'x_model': x_model
     }
 
-
-def spocti_mse(predikce):
-    mse_zaklad = mean_squared_error(
-        np.column_stack((predikce['y_pravda'], predikce['x_pravda'])),
-        np.column_stack((predikce['y_zaklad'], predikce['x_zaklad']))
-    )
-    
-    mse_rf = mean_squared_error(
-        np.column_stack((predikce['y_pravda'], predikce['x_pravda'])),
-        np.column_stack((predikce['y_rf'], predikce['x_rf']))
-    )
-    
-    return mse_zaklad, mse_rf
-
-
 def spocti_chyby(vysledky, cisla_bodu, test_idx):
     pravdive_hodnoty = pd.DataFrame(index=test_idx)
     zakladni_hodnoty = pd.DataFrame(index=test_idx)
@@ -161,34 +146,11 @@ def spocti_chyby(vysledky, cisla_bodu, test_idx):
         chyby_zaklad[f'{prefix}'] = np.abs(predikce['y_pravda'] - predikce['y_zaklad'])
         chyby_rf[f'{prefix}'] = np.abs(predikce['y_pravda'] - predikce['y_rf'])
     
-    #vypocet celkovy mse, docela slozity
-    def spocti_celkove_mse(pravda_df, predikce_df):
-        hodnoty_pravda = []
-        hodnoty_predikce = []
-        
-        for cislo in cisla_bodu:
-            prefix = f"kp{cislo}"
-            hodnoty_pravda.append(pravda_df[[f'{prefix}_y', f'{prefix}_x']].values)
-            hodnoty_predikce.append(predikce_df[[f'{prefix}_y', f'{prefix}_x']].values)
-        
-        hodnoty_pravda = np.concatenate(hodnoty_pravda, axis=1)
-        hodnoty_predikce = np.concatenate(hodnoty_predikce, axis=1)
-        
-        return mean_squared_error(hodnoty_pravda, hodnoty_predikce)
-    
-    celkova_mse_zaklad = spocti_celkove_mse(pravdive_hodnoty, zakladni_hodnoty)
-    celkova_mse_rf = spocti_celkove_mse(pravdive_hodnoty, rf_hodnoty)
-    zlepseni_procenta = 100 * (celkova_mse_zaklad - celkova_mse_rf) / celkova_mse_zaklad
-    
-    print(f"\nCelkové výsledky:")
-    print(f"MSE bodu s největší vahou: {celkova_mse_zaklad:.4f}")
-    print(f"MSE náhodného lesa: {celkova_mse_rf:.4f}")
-    print(f"Celkové zlepšení: {zlepseni_procenta:.2f}%")
     
     return pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf
 
 
-def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, chyby_rf, cisla_bodu, cesta_vystup):
+def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, cesta_vystup):
     print(f"Ukládání predikcí do {cesta_vystup}...")
     vysledky_df = pd.DataFrame(index=pravdive_hodnoty.index)
     
@@ -205,12 +167,10 @@ def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, chyby_zaklad, 
         vysledky_df[f'predikce_{prefix}_y'] = rf_hodnoty[f'{prefix}_y']
         vysledky_df[f'predikce_{prefix}_x'] = rf_hodnoty[f'{prefix}_x']
         
-        vysledky_df[f'chyba_nejvetsi_vaha_{prefix}'] = chyby_zaklad[f'{prefix}']
-        vysledky_df[f'chyba_predikce_{prefix}'] = chyby_rf[f'{prefix}']
     
     #vytvorim adresar kdyztak
     os.makedirs(os.path.dirname(cesta_vystup), exist_ok=True)
-    vysledky_df.to_csv(cesta_vystup)
+    vysledky_df.to_csv(cesta_vystup, index=False)
     print(f"Predikce uloženy do {cesta_vystup}")
 
 
