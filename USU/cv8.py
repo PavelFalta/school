@@ -174,7 +174,7 @@ def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, ce
     print(f"Predikce uloženy do {cesta_vystup}")
 
 
-def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu"):
+def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_pavel/predikce_bodu"):
     #nactu data z csv
     df = nacti_data(cesta_vstup)
     
