@@ -25,9 +25,9 @@ def najdi_body(df):
     return cisla_bodu
 
 
-def rozdel_data(df, test_velikost=0.2):
+def rozdel_data(df, test_velikost=0.2, random_state=42):
     radky_indexy = np.arange(len(df))
-    train_idx, test_idx = train_test_split(radky_indexy, test_size=test_velikost, random_state=42)
+    train_idx, test_idx = train_test_split(radky_indexy, test_size=test_velikost, random_state=random_state)
     print(f"Data rozdělena: {len(train_idx)} trénovacích vzorků, {len(test_idx)} testovacích vzorků")
     return train_idx, test_idx
 
@@ -143,7 +143,7 @@ def vypocitej_pro_bod(vysledky, cisla_bodu, test_idx):
     return pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty
 
 
-def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, cesta_vystup):
+def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, cesta_vystup, ran_i):
     print(f"Ukládání predikcí do {cesta_vystup}...")
     vysledky_df = pd.DataFrame(index=pravdive_hodnoty.index)
     
@@ -163,11 +163,11 @@ def uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, ce
     
     #vytvorim adresar kdyztak
     os.makedirs(os.path.dirname(cesta_vystup), exist_ok=True)
-    vysledky_df.to_csv(cesta_vystup, index=False)
+    vysledky_df.to_csv(cesta_vystup + f"_ran{ran_i}.csv", index=False)
     print(f"Predikce uloženy do {cesta_vystup}")
 
 
-def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu.csv"):
+def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predikce_bodu"):
     #nactu data z csv
     df = nacti_data(cesta_vstup)
     
@@ -175,22 +175,23 @@ def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predi
     cisla_bodu = najdi_body(df)
     
     #rozdelim data na trenink a test
-    train_idx, test_idx = rozdel_data(df)
-    
-    #zpracuju kazdy bod zvlast
-    print("Zpracování bodů...")
-    vysledky = {}
-    for cislo in tqdm(cisla_bodu, desc="Zpracování bodů"):
-        vysledky[cislo] = zpracuj_bod(df, cislo, train_idx, test_idx)
-    
-    #spocitam chyby a tak
-    pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty = vypocitej_pro_bod(
-        vysledky, cisla_bodu, test_idx
-    )
-    
-    #ulozim vysledky do souboru
-    uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, cesta_vystup)
-    
+    for ran_i in range(10):
+        train_idx, test_idx = rozdel_data(df, random_state=ran_i)
+        
+        #zpracuju kazdy bod zvlast
+        print("Zpracování bodů...")
+        vysledky = {}
+        for cislo in tqdm(cisla_bodu, desc="Zpracování bodů"):
+            vysledky[cislo] = zpracuj_bod(df, cislo, train_idx, test_idx)
+        
+        #spocitam chyby a tak
+        pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty = vypocitej_pro_bod(
+            vysledky, cisla_bodu, test_idx
+        )
+        
+        #ulozim vysledky do souboru
+        uloz_predikce(pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty, cisla_bodu, cesta_vystup, ran_i)
+        
     return vysledky
 
 
