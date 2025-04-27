@@ -4,8 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Corrected paths based on file search
-path_jara = "USU/data/predikce_jara"
-path_pavel = "USU/data/predikce_pavel"
+path_jara = "data/predikce_jara"
+path_pavel = "data/predikce_pavel"
 PLOT_DIR = "comparison_plots" # Directory to save plots
 
 # Number of keypoints (kp0 to kp22)
