@@ -92,7 +92,8 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
     sloupce_priznaku = udel_priznaky(df, cislo_bodu)
     X = df[sloupce_priznaku].values
     skalovac = StandardScaler()
-    X_skalovane = skalovac.fit_transform(X)
+    skalovac.fit(X[train_idx])
+    X_skalovane = skalovac.transform(X[test_idx])
     
     X_train = X_skalovane[train_idx]
     X_test = X_skalovane[test_idx]
