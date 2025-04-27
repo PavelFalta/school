@@ -1,0 +1,20 @@
+{
+    "y": {
+        "n_estimators": 600,
+        "max_depth": 39,
+        "min_samples_split": 10,
+        "min_samples_leaf": 1,
+        "max_features": "log2",
+        "bootstrap": true,
+        "criterion": "squared_error"
+    },
+    "x": {
+        "n_estimators": 550,
+        "max_depth": 23,
+        "min_samples_split": 7,
+        "min_samples_leaf": 3,
+        "max_features": 0.7,
+        "bootstrap": true,
+        "criterion": "absolute_error"
+    }
+}
