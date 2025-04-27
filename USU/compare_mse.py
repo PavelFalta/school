@@ -192,10 +192,6 @@ pavel_clean_y = [y for y in pavel_plot_y if not np.isnan(y)]
 base_clean_x = [x for x in base_plot_x if not np.isnan(x)]
 base_clean_y = [y for y in base_plot_y if not np.isnan(y)]
 
-# Calculate differences (Jara vs Pavel)
-diff_x = [p - j if not (np.isnan(p) or np.isnan(j)) else np.nan for p, j in zip(pavel_plot_x, jara_plot_x)]
-diff_y = [p - j if not (np.isnan(p) or np.isnan(j)) else np.nan for p, j in zip(pavel_plot_y, jara_plot_y)]
-
 # Plot 1: Per-Point MSE Comparison (Line Plot - INCLUDING BASELINE)
 fig1, ax1 = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
 # Plot X MSE
@@ -274,29 +270,5 @@ plot3_path = os.path.join(PLOT_DIR, 'prediction_mse_distribution_comparison.png'
 plt.savefig(plot3_path)
 print(f"Saved Prediction MSE distribution plot to {plot3_path}")
 plt.close(fig3)
-
-# Plot 4: Difference in Per-Point Prediction MSEs (Pavel - Jara)
-fig4, ax4 = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-
-ax4[0].plot(points, diff_x, marker='.', linestyle='-', label='MSE X Difference (Pavel - Jara)')
-ax4[0].axhline(0, color='grey', linestyle='--', linewidth=0.8)
-ax4[0].set_ylabel('Prediction MSE Difference')
-ax4[0].set_title('Difference in Per-Point Prediction MSE (Pavel - Jara)')
-ax4[0].legend()
-ax4[0].grid(True, which='both', linestyle='--', linewidth=0.5)
-ax4[0].set_xticks(points)
-
-ax4[1].plot(points, diff_y, marker='.', linestyle='-', label='MSE Y Difference (Pavel - Jara)')
-ax4[1].axhline(0, color='grey', linestyle='--', linewidth=0.8)
-ax4[1].set_xlabel(f'Point Index (0-{NUM_POINTS-1})')
-ax4[1].set_ylabel('Prediction MSE Difference')
-ax4[1].legend()
-ax4[1].grid(True, which='both', linestyle='--', linewidth=0.5)
-
-fig4.tight_layout(rect=[0, 0.03, 1, 0.98])
-plot4_path = os.path.join(PLOT_DIR, 'prediction_mse_difference_per_point.png') # Renamed file
-plt.savefig(plot4_path)
-print(f"Saved Prediction MSE difference plot to {plot4_path}")
-plt.close(fig4)
 
 # plt.show() # Optional
