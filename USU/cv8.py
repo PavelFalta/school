@@ -88,15 +88,22 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
     #tady ziskam zakladni predikce
     y_zaklad, x_zaklad = udel_zakladni_predikce(df, cislo_bodu)
     
-    #vytvori a oskaluje priznaky
+    #vytvori priznaky
     sloupce_priznaku = udel_priznaky(df, cislo_bodu)
     X = df[sloupce_priznaku].values
+
+    # Rozdelim data pred skalovanim
+    X_train_raw = X[train_idx]
+    X_test_raw = X[test_idx]
+
+    # Vytvorim a natrenuju skalovac na trenovacich datech
     skalovac = StandardScaler()
-    X_skalovane = skalovac.fit_transform(X)
-    
-    X_train = X_skalovane[train_idx]
-    X_test = X_skalovane[test_idx]
-    
+    skalovac.fit(X_train_raw)
+
+    # Oskaluju trenovaci a testovaci data
+    X_train = skalovac.transform(X_train_raw)
+    X_test = skalovac.transform(X_test_raw)
+
     y_train_y = df.loc[train_idx, y_sloupec].values
     y_train_x = df.loc[train_idx, x_sloupec].values
     
