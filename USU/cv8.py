@@ -7,6 +7,10 @@ import re
 import os
 from tqdm import tqdm
 from warnings import filterwarnings
+import optuna
+import json
+import joblib
+from sklearn.metrics import mean_squared_error
 
 filterwarnings("ignore")
 
@@ -68,14 +72,18 @@ def udel_priznaky(df, cislo_bodu):
     return sloupce_priznaku
 
 
-def trenuj_model(X_train, y_train):
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
+def trenuj_model(X_train, y_train, params):
+    model = RandomForestRegressor(random_state=42, **params)
     model.fit(X_train, y_train)
     return model
 
 
-def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
+def zpracuj_bod(df, cislo_bodu, train_idx, test_idx, params_dir):
     prefix = f"kp{cislo_bodu}"
+    
+    # Define path for saving/loading best hyperparameters
+    param_path = os.path.join(params_dir, f"kp{cislo_bodu}_best_params.json")
+    os.makedirs(params_dir, exist_ok=True) # Ensure directory exists
     
     #najdu cilovy sloupecky
     y_sloupec = f"target_{prefix}_y"
@@ -107,9 +115,80 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx):
     y_train_y = df.loc[train_idx, y_sloupec].values
     y_train_x = df.loc[train_idx, x_sloupec].values
     
+    best_params_y = None
+    best_params_x = None
+
+    # --- Optuna Integration --- 
+    try:
+        # Try loading existing best parameters
+        with open(param_path, 'r') as f:
+            saved_params = json.load(f)
+            best_params_y = saved_params['y']
+            best_params_x = saved_params['x']
+        print(f"Načteny nejlepší parametry pro bod {cislo_bodu} z {param_path}")
+    except FileNotFoundError:
+        print(f"Nejlepší parametry pro bod {cislo_bodu} nenalezeny. Spouštění Optuna optimalizace...")
+        
+        # Split training data further for hyperparameter tuning validation
+        X_train_opt, X_val_opt, y_train_y_opt, y_val_y_opt = train_test_split(
+            X_train, y_train_y, test_size=0.25, random_state=42) # Use 25% for validation
+        _, _, y_train_x_opt, y_val_x_opt = train_test_split(
+            X_train, y_train_x, test_size=0.25, random_state=42) # Need same split for X features
+
+        # --- Objective Function for Y --- 
+        def objective_y(trial):
+            params = {
+                'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                'max_depth': trial.suggest_int('max_depth', 5, 50, log=True),
+                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 20),
+                'max_features': trial.suggest_float('max_features', 0.1, 1.0) # Suggest float for proportion
+            }
+            model = RandomForestRegressor(random_state=42, **params)
+            model.fit(X_train_opt, y_train_y_opt)
+            preds = model.predict(X_val_opt)
+            mse = mean_squared_error(y_val_y_opt, preds)
+            return mse
+
+        # --- Objective Function for X --- 
+        def objective_x(trial):
+            # Use same parameter suggestions as for Y
+            params = {
+                'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                'max_depth': trial.suggest_int('max_depth', 5, 50, log=True),
+                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 20),
+                'max_features': trial.suggest_float('max_features', 0.1, 1.0)
+            }
+            model = RandomForestRegressor(random_state=42, **params)
+            model.fit(X_train_opt, y_train_x_opt) # Use X training targets
+            preds = model.predict(X_val_opt)
+            mse = mean_squared_error(y_val_x_opt, preds) # Use X validation targets
+            return mse
+        
+        # --- Run Optuna Study for Y --- 
+        study_y = optuna.create_study(direction='minimize')
+        # Suppress Optuna logs for cleaner output, use show_progress_bar=True if desired
+        study_y.optimize(objective_y, n_trials=50, show_progress_bar=False) 
+        best_params_y = study_y.best_params
+        print(f"Optimalizace Y pro bod {cislo_bodu} dokončena. Nejlepší parametry: {best_params_y}")
+
+        # --- Run Optuna Study for X --- 
+        study_x = optuna.create_study(direction='minimize')
+        study_x.optimize(objective_x, n_trials=50, show_progress_bar=False)
+        best_params_x = study_x.best_params
+        print(f"Optimalizace X pro bod {cislo_bodu} dokončena. Nejlepší parametry: {best_params_x}")
+
+        # Save the best parameters found
+        with open(param_path, 'w') as f:
+            json.dump({'y': best_params_y, 'x': best_params_x}, f, indent=4)
+        print(f"Nejlepší parametry uloženy do {param_path}")
+    
+    # --- Train Final Models with Best Parameters --- 
+    print(f"Trénování finálních modelů pro bod {cislo_bodu} s nejlepšími parametry...")
     #trenuju modely
-    y_model = trenuj_model(X_train, y_train_y)
-    x_model = trenuj_model(X_train, y_train_x)
+    y_model = trenuj_model(X_train, y_train_y, best_params_y)
+    x_model = trenuj_model(X_train, y_train_x, best_params_x)
     
     #tedka udelam predikce
     y_pred_rf = y_model.predict(X_test)
@@ -188,8 +267,9 @@ def predikuj_body(cesta_vstup="data/data-recovery.csv", cesta_vystup="data/predi
         #zpracuju kazdy bod zvlast
         print("Zpracování bodů...")
         vysledky = {}
+        params_dir = "data/best_params" # Define parameter directory
         for cislo in tqdm(cisla_bodu, desc="Zpracování bodů"):
-            vysledky[cislo] = zpracuj_bod(df, cislo, train_idx, test_idx)
+            vysledky[cislo] = zpracuj_bod(df, cislo, train_idx, test_idx, params_dir=params_dir) # Pass params_dir
         
         #spocitam chyby a tak
         pravdive_hodnoty, zakladni_hodnoty, rf_hodnoty = vypocitej_pro_bod(
