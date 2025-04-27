@@ -138,11 +138,13 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx, params_dir):
         # --- Objective Function for Y --- 
         def objective_y(trial):
             params = {
-                'n_estimators': trial.suggest_int('n_estimators', 50, 300),
-                'max_depth': trial.suggest_int('max_depth', 5, 50, log=True),
-                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
-                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 20),
-                'max_features': trial.suggest_float('max_features', 0.1, 1.0) # Suggest float for proportion
+                'n_estimators': trial.suggest_int('n_estimators', 100, 1000, step=50),
+                'max_depth': trial.suggest_int('max_depth', 10, 100, log=True),
+                'min_samples_split': trial.suggest_int('min_samples_split', 2, 30),
+                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 30),
+                'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2', 0.3, 0.5, 0.7, 1.0]),
+                'bootstrap': trial.suggest_categorical('bootstrap', [True, False]),
+                'criterion': trial.suggest_categorical('criterion', ['squared_error', 'absolute_error'])
             }
             model = RandomForestRegressor(random_state=42, **params)
             model.fit(X_train_opt, y_train_y_opt)
@@ -152,30 +154,30 @@ def zpracuj_bod(df, cislo_bodu, train_idx, test_idx, params_dir):
 
         # --- Objective Function for X --- 
         def objective_x(trial):
-            # Use same parameter suggestions as for Y
             params = {
-                'n_estimators': trial.suggest_int('n_estimators', 50, 300),
-                'max_depth': trial.suggest_int('max_depth', 5, 50, log=True),
-                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
-                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 20),
-                'max_features': trial.suggest_float('max_features', 0.1, 1.0)
+                'n_estimators': trial.suggest_int('n_estimators', 100, 1000, step=50),
+                'max_depth': trial.suggest_int('max_depth', 10, 100, log=True),
+                'min_samples_split': trial.suggest_int('min_samples_split', 2, 30),
+                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 30),
+                'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2', 0.3, 0.5, 0.7, 1.0]),
+                'bootstrap': trial.suggest_categorical('bootstrap', [True, False]),
+                'criterion': trial.suggest_categorical('criterion', ['squared_error', 'absolute_error'])
             }
             model = RandomForestRegressor(random_state=42, **params)
-            model.fit(X_train_opt, y_train_x_opt) # Use X training targets
+            model.fit(X_train_opt, y_train_x_opt)
             preds = model.predict(X_val_opt)
-            mse = mean_squared_error(y_val_x_opt, preds) # Use X validation targets
+            mse = mean_squared_error(y_val_x_opt, preds)
             return mse
         
         # --- Run Optuna Study for Y --- 
         study_y = optuna.create_study(direction='minimize')
-        # Suppress Optuna logs for cleaner output, use show_progress_bar=True if desired
-        study_y.optimize(objective_y, n_trials=50, show_progress_bar=False) 
+        study_y.optimize(objective_y, n_trials=150, show_progress_bar=False)
         best_params_y = study_y.best_params
         print(f"Optimalizace Y pro bod {cislo_bodu} dokončena. Nejlepší parametry: {best_params_y}")
 
         # --- Run Optuna Study for X --- 
         study_x = optuna.create_study(direction='minimize')
-        study_x.optimize(objective_x, n_trials=50, show_progress_bar=False)
+        study_x.optimize(objective_x, n_trials=150, show_progress_bar=False)
         best_params_x = study_x.best_params
         print(f"Optimalizace X pro bod {cislo_bodu} dokončena. Nejlepší parametry: {best_params_x}")
 
