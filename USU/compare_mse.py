@@ -187,3 +187,4 @@ plot3_path = os.path.join(PLOT_DIR, 'prediction_mse_distribution_comparison.png'
 plt.savefig(plot3_path)
 print(f"Saved Prediction MSE distribution plot to {plot3_path}")
 plt.close(fig3)
+print("Done")
