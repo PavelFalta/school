@@ -1,14 +1,9 @@
 import numpy as np
 
-A = np.array(
-    [[1,1,1],
-     [1,1,1],
-     [1,1,1]])
-
-B = np.array(
-    [[1,2],
-     [4,2],
-     [7,2]])
+# Generate larger matrices for performance testing
+size = 100  # You can adjust this size for different performance tests
+A = np.random.rand(size, size)  # 100x100 random matrix
+B = np.random.rand(size, size)  # 100x100 random matrix
 
 # 1 + 4 + 7
 
@@ -32,11 +27,10 @@ def matmul(A, B):
 
     for rrow_i, res_row in enumerate(result):
         for ccol_i, _ in enumerate(res_row):
-            r = []
-            for A_i,item_A in enumerate(A[rrow_i]):
-                r.append(item_A*B[ccol_i, A_i])
-            
-            result[rrow_i, ccol_i] = np.sum(np.array(r))
+            sum_product = 0
+            for A_i, item_A in enumerate(A[rrow_i]):
+                sum_product += item_A * B[ccol_i, A_i]
+            result[rrow_i, ccol_i] = sum_product
 
     
     return result
