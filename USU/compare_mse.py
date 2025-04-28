@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 path_jara = "data/predikce_jara"
 path_pavel = "data/predikce_pavel"
-PLOT_DIR = "comparison_plots" 
+PLOT_DIR = "comparison_plots"
 
 NUM_POINTS = 23
 
@@ -19,34 +19,32 @@ def calculate_mse_for_point(df, k):
     base_x_col = f'nejvetsi_vaha_kp{k}_x'
     base_y_col = f'nejvetsi_vaha_kp{k}_y'
 
-    mse_pred_x, mse_pred_y = np.nan, np.nan
-    mse_base_x, mse_base_y = np.nan, np.nan
+    mse_pred_x, mse_pred_y = 0.0, 0.0
+    mse_base_x, mse_base_y = 0.0, 0.0
 
     pred_cols = [target_x_col, target_y_col, pred_x_col, pred_y_col]
     if not all(col in df.columns for col in pred_cols):
-        pass 
+        print(f"    - Point {k}: Skipping prediction MSE calculation due to missing columns.")
     else:
         try:
-            df_pred = df[pred_cols].apply(pd.to_numeric, errors='coerce').dropna()
-            if not df_pred.empty:
-                sq_err_pred_x = (df_pred[target_x_col] - df_pred[pred_x_col])**2
-                sq_err_pred_y = (df_pred[target_y_col] - df_pred[pred_y_col])**2
-                mse_pred_x = np.mean(sq_err_pred_x)
-                mse_pred_y = np.mean(sq_err_pred_y)
+            df_pred = df[pred_cols].apply(pd.to_numeric)
+            sq_err_pred_x = (df_pred[target_x_col] - df_pred[pred_x_col])**2
+            sq_err_pred_y = (df_pred[target_y_col] - df_pred[pred_y_col])**2
+            mse_pred_x = np.mean(sq_err_pred_x)
+            mse_pred_y = np.mean(sq_err_pred_y)
         except Exception as e:
             print(f"    - Point {k}: Error during prediction MSE calculation: {e}")
-            
+
     base_cols = [target_x_col, target_y_col, base_x_col, base_y_col]
     if not all(col in df.columns for col in base_cols):
-         pass
+        print(f"    - Point {k}: Skipping baseline MSE calculation due to missing columns.")
     else:
         try:
-            df_base = df[base_cols].apply(pd.to_numeric, errors='coerce').dropna()
-            if not df_base.empty:
-                sq_err_base_x = (df_base[target_x_col] - df_base[base_x_col])**2
-                sq_err_base_y = (df_base[target_y_col] - df_base[base_y_col])**2
-                mse_base_x = np.mean(sq_err_base_x)
-                mse_base_y = np.mean(sq_err_base_y)
+            df_base = df[base_cols].apply(pd.to_numeric)
+            sq_err_base_x = (df_base[target_x_col] - df_base[base_x_col])**2
+            sq_err_base_y = (df_base[target_y_col] - df_base[base_y_col])**2
+            mse_base_x = np.mean(sq_err_base_x)
+            mse_base_y = np.mean(sq_err_base_y)
         except Exception as e:
             print(f"    - Point {k}: Error during baseline MSE calculation: {e}")
 
@@ -61,7 +59,8 @@ def process_directory(dir_path, calculate_baseline=False):
 
     if not os.path.isdir(dir_path):
         print(f"Error: Directory not found - {dir_path}")
-        return None, None, None, None
+        empty_dict = {k: 0.0 for k in range(NUM_POINTS)}
+        return empty_dict, empty_dict, empty_dict if calculate_baseline else None, empty_dict if calculate_baseline else None
 
     print(f"Processing directory: {dir_path}")
     for filename in os.listdir(dir_path):
@@ -72,20 +71,15 @@ def process_directory(dir_path, calculate_baseline=False):
                 file_processed = False
                 for k in range(NUM_POINTS):
                     mse_pred_x, mse_pred_y, mse_base_x, mse_base_y = calculate_mse_for_point(df, k)
-                    
-                    if not np.isnan(mse_pred_x):
-                        point_mses_pred_x[k].append(mse_pred_x)
-                        file_processed = True
-                    if not np.isnan(mse_pred_y):
-                        point_mses_pred_y[k].append(mse_pred_y)
-                        file_processed = True
-                        
+
+                    point_mses_pred_x[k].append(mse_pred_x)
+                    point_mses_pred_y[k].append(mse_pred_y)
+                    file_processed = True
+
                     if calculate_baseline:
-                        if not np.isnan(mse_base_x):
-                            point_mses_base_x[k].append(mse_base_x)
-                        if not np.isnan(mse_base_y):
-                            point_mses_base_y[k].append(mse_base_y)
-                
+                        point_mses_base_x[k].append(mse_base_x)
+                        point_mses_base_y[k].append(mse_base_y)
+
                 if file_processed:
                     processed_files_count += 1
 
@@ -94,15 +88,16 @@ def process_directory(dir_path, calculate_baseline=False):
 
     if processed_files_count == 0:
          print(f"Warning: No CSV files successfully processed in directory {dir_path}")
-         return None, None, None, None
+         empty_dict = {k: 0.0 for k in range(NUM_POINTS)}
+         return empty_dict, empty_dict, empty_dict if calculate_baseline else None, empty_dict if calculate_baseline else None
 
-    avg_pred_mse_x = {k: np.nanmean(point_mses_pred_x[k]) if point_mses_pred_x[k] else np.nan for k in range(NUM_POINTS)}
-    avg_pred_mse_y = {k: np.nanmean(point_mses_pred_y[k]) if point_mses_pred_y[k] else np.nan for k in range(NUM_POINTS)}
+    avg_pred_mse_x = {k: np.mean(point_mses_pred_x[k]) if point_mses_pred_x[k] else 0.0 for k in range(NUM_POINTS)}
+    avg_pred_mse_y = {k: np.mean(point_mses_pred_y[k]) if point_mses_pred_y[k] else 0.0 for k in range(NUM_POINTS)}
     avg_base_mse_x = None
     avg_base_mse_y = None
     if calculate_baseline:
-        avg_base_mse_x = {k: np.nanmean(point_mses_base_x[k]) if point_mses_base_x[k] else np.nan for k in range(NUM_POINTS)}
-        avg_base_mse_y = {k: np.nanmean(point_mses_base_y[k]) if point_mses_base_y[k] else np.nan for k in range(NUM_POINTS)}
+        avg_base_mse_x = {k: np.mean(point_mses_base_x[k]) if point_mses_base_x[k] else 0.0 for k in range(NUM_POINTS)}
+        avg_base_mse_y = {k: np.mean(point_mses_base_y[k]) if point_mses_base_y[k] else 0.0 for k in range(NUM_POINTS)}
 
     print(f"Finished processing {dir_path}. Processed {processed_files_count} files.")
     return avg_pred_mse_x, avg_pred_mse_y, avg_base_mse_x, avg_base_mse_y
@@ -116,7 +111,7 @@ jara_pred_mse_x, jara_pred_mse_y, base_mse_x, base_mse_y = process_directory(pat
 print("Processing Pavel's data...")
 pavel_pred_mse_x, pavel_pred_mse_y, _, _ = process_directory(path_pavel, calculate_baseline=False)
 
-if jara_pred_mse_x is None or pavel_pred_mse_x is None or base_mse_x is None:
+if not jara_pred_mse_x or not pavel_pred_mse_x or not base_mse_x:
     print("Error: Could not calculate MSE. Exiting.")
     exit()
 
@@ -125,18 +120,18 @@ jara_vals_pred_y = list(jara_pred_mse_y.values())
 pavel_vals_pred_x = list(pavel_pred_mse_x.values())
 pavel_vals_pred_y = list(pavel_pred_mse_y.values())
 
-jara_overall_pred_mse_x = np.nanmean(jara_vals_pred_x)
-jara_overall_pred_mse_y = np.nanmean(jara_vals_pred_y)
+jara_overall_pred_mse_x = np.mean(jara_vals_pred_x)
+jara_overall_pred_mse_y = np.mean(jara_vals_pred_y)
 jara_overall_pred_total_mse = jara_overall_pred_mse_x + jara_overall_pred_mse_y
 
-pavel_overall_pred_mse_x = np.nanmean(pavel_vals_pred_x)
-pavel_overall_pred_mse_y = np.nanmean(pavel_vals_pred_y)
+pavel_overall_pred_mse_x = np.mean(pavel_vals_pred_x)
+pavel_overall_pred_mse_y = np.mean(pavel_vals_pred_y)
 pavel_overall_pred_total_mse = pavel_overall_pred_mse_x + pavel_overall_pred_mse_y
 
 base_vals_x = list(base_mse_x.values())
 base_vals_y = list(base_mse_y.values())
-overall_base_mse_x = np.nanmean(base_vals_x)
-overall_base_mse_y = np.nanmean(base_vals_y)
+overall_base_mse_x = np.mean(base_vals_x)
+overall_base_mse_y = np.mean(base_vals_y)
 overall_base_total_mse = overall_base_mse_x + overall_base_mse_y
 
 print("--- Overall Average Prediction MSE Results ---")
@@ -144,31 +139,21 @@ print(f"Jara    - Prediction Total MSE: {jara_overall_pred_total_mse:.4f} (X: {j
 print(f"Pavel   - Prediction Total MSE: {pavel_overall_pred_total_mse:.4f} (X: {pavel_overall_pred_mse_x:.4f}, Y: {pavel_overall_pred_mse_y:.4f})")
 print(f"Baseline - Total MSE:          {overall_base_total_mse:.4f} (X: {overall_base_mse_x:.4f}, Y: {overall_base_mse_y:.4f})")
 
-if np.isnan(jara_overall_pred_total_mse) or np.isnan(pavel_overall_pred_total_mse):
-    print("Warning: Could not calculate overall MSE for comparison due to missing data.")
-elif jara_overall_pred_total_mse < pavel_overall_pred_total_mse:
+if jara_overall_pred_total_mse < pavel_overall_pred_total_mse:
     print("Jara's model has a lower overall average prediction MSE.")
 elif pavel_overall_pred_total_mse < jara_overall_pred_total_mse:
     print("Pavel's model has a lower overall average prediction MSE.")
 else:
-    print("Both models have the same overall average prediction MSE (or comparison failed due to NaNs).")
+    print("Both models have the same overall average prediction MSE.")
 
 points = list(range(NUM_POINTS))
 
-jara_plot_x = [jara_pred_mse_x.get(i, np.nan) for i in points]
-jara_plot_y = [jara_pred_mse_y.get(i, np.nan) for i in points]
-pavel_plot_x = [pavel_pred_mse_x.get(i, np.nan) for i in points]
-pavel_plot_y = [pavel_pred_mse_y.get(i, np.nan) for i in points]
-base_plot_x = [base_mse_x.get(i, np.nan) for i in points]
-base_plot_y = [base_mse_y.get(i, np.nan) for i in points]
-
-jara_clean_x = [x for x in jara_plot_x if not np.isnan(x)]
-jara_clean_y = [y for y in jara_plot_y if not np.isnan(y)]
-pavel_clean_x = [x for x in pavel_plot_x if not np.isnan(x)]
-pavel_clean_y = [y for y in pavel_plot_y if not np.isnan(y)]
-
-base_clean_x = [x for x in base_plot_x if not np.isnan(x)]
-base_clean_y = [y for y in base_plot_y if not np.isnan(y)]
+jara_plot_x = [jara_pred_mse_x.get(i, 0.0) for i in points]
+jara_plot_y = [jara_pred_mse_y.get(i, 0.0) for i in points]
+pavel_plot_x = [pavel_pred_mse_x.get(i, 0.0) for i in points]
+pavel_plot_y = [pavel_pred_mse_y.get(i, 0.0) for i in points]
+base_plot_x = [base_mse_x.get(i, 0.0) for i in points]
+base_plot_y = [base_mse_y.get(i, 0.0) for i in points]
 
 fig1, ax1 = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
 ax1[0].plot(points, jara_plot_x, marker='o', linestyle='-', label='Jara Pred X', alpha=0.8)
@@ -198,8 +183,8 @@ overall_pred_x = [jara_overall_pred_mse_x, pavel_overall_pred_mse_x, overall_bas
 overall_pred_y = [jara_overall_pred_mse_y, pavel_overall_pred_mse_y, overall_base_mse_y]
 overall_pred_total = [jara_overall_pred_total_mse, pavel_overall_pred_total_mse, overall_base_total_mse]
 
-x_pos = np.arange(len(labels))  
-width = 0.25  
+x_pos = np.arange(len(labels))
+width = 0.25
 
 fig2, ax2 = plt.subplots(figsize=(10, 7))
 rects1 = ax2.bar(x_pos - width, overall_pred_x, width, label='Avg MSE X')
@@ -222,23 +207,17 @@ plt.close(fig2)
 
 fig3, ax3 = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
 
-if jara_clean_x or pavel_clean_x:
-    ax3[0].boxplot([jara_clean_x, pavel_clean_x], labels=['Jara X', 'Pavel X'], showmeans=True)
-    ax3[0].set_title('Distribution of Per-Point Prediction MSE X')
-    ax3[0].set_ylabel('Per-Point Prediction MSE')
-    ax3[0].grid(True, linestyle='--', linewidth=0.5)
-else:
-    ax3[0].text(0.5, 0.5, 'No valid X data for boxplot', ha='center', va='center')
+ax3[0].boxplot([jara_plot_x, pavel_plot_x], labels=['Jara X', 'Pavel X'], showmeans=True)
+ax3[0].set_title('Distribution of Per-Point Prediction MSE X')
+ax3[0].set_ylabel('Per-Point Prediction MSE')
+ax3[0].grid(True, linestyle='--', linewidth=0.5)
 
-if jara_clean_y or pavel_clean_y:
-    ax3[1].boxplot([jara_clean_y, pavel_clean_y], labels=['Jara Y', 'Pavel Y'], showmeans=True)
-    ax3[1].set_title('Distribution of Per-Point Prediction MSE Y')
-    ax3[1].grid(True, linestyle='--', linewidth=0.5)
-else:
-    ax3[1].text(0.5, 0.5, 'No valid Y data for boxplot', ha='center', va='center')
+ax3[1].boxplot([jara_plot_y, pavel_plot_y], labels=['Jara Y', 'Pavel Y'], showmeans=True)
+ax3[1].set_title('Distribution of Per-Point Prediction MSE Y')
+ax3[1].grid(True, linestyle='--', linewidth=0.5)
 
 fig3.tight_layout()
-plot3_path = os.path.join(PLOT_DIR, 'prediction_mse_distribution_comparison.png') 
+plot3_path = os.path.join(PLOT_DIR, 'prediction_mse_distribution_comparison.png')
 plt.savefig(plot3_path)
 print(f"Saved Prediction MSE distribution plot to {plot3_path}")
 plt.close(fig3)
