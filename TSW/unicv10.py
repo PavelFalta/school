@@ -27,6 +27,10 @@ def overit_studenta(student_data):
     ({"vek": 19, "prumer": 2.5, "datum_podani": datetime(2025, 5, 14)}, "Student je platny"), 
     ({"vek": 19, "prumer": 2.4, "datum_podani": datetime(2025, 5, 14)}, "Student je platny"), 
 
+    ({"vek": 19, "prumer": 1.0, "datum_podani": datetime(2025, 5, 16)}, "Student je neplatny"), 
+    ({"vek": 19, "prumer": 1.0, "datum_podani": datetime(2025, 5, 15)}, "Student je platny"), 
+    ({"vek": 19, "prumer": 1.0, "datum_podani": datetime(2025, 5, 14)}, "Student je platny"), 
+
 
 ])
 
