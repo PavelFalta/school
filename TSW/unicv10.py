@@ -16,11 +16,3 @@ def zapsat_na_vejsku(student_data, expected_result):
         return "Student nepodal vcas"
     
     return "Student je platny"
-
-student_data = {
-    "vek": 20,
-    "prumer": 1.5,
-    "datum_podani": datetime(2025, 1, 1),
-}
-
-print(zapsat_na_vejsku(student_data))
