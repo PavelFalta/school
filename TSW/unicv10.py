@@ -9,8 +9,10 @@ def overit_studenta(student_data):
 
     if student_data["vek"] < vek_limit:
         return "Student je neplatny"
+    
     if student_data["prumer"] < prumer_limit: 
         return "Student je neplatny"
+    
     if student_data["datum_podani"] > deadline: 
         return "Student je neplatny"
 
