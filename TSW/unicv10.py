@@ -10,7 +10,7 @@ def overit_studenta(student_data):
     if student_data["vek"] < vek_limit:
         return "Student je neplatny"
     
-    if student_data["prumer"] < prumer_limit: 
+    if student_data["prumer"] > prumer_limit: 
         return "Student je neplatny"
     
     if student_data["datum_podani"] > deadline: 
@@ -37,4 +37,4 @@ def overit_studenta(student_data):
 ])
 
 def test_overit_studenta(student_data, expected_result):
-    assert overit_studenta(student_data) == expected_result
+    assert overit_studenta(student_data) == expected_result, f"Test failed for student data: {student_data}"
